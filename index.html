@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electricity</title>
+  <style>
+    * {
+      margin: 0
+    }
+    canvas {
+      width: 800px;
+      /*image-rendering: crisp-edges;*/
+      border: 20px solid burlywood;
+      border-color: antiquewhite burlywood burlywood blanchedalmond;
+    }
+  </style>
+</head>
+<body>
+  <canvas width="800" height="480"></canvas>
+  <script type="module">
+    let canvas = document.querySelector("canvas");
+    let ctx = canvas.getContext("2d");
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+
+    ctx.translate(0.5, 0.5);
+
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(200, 40, 40, 40)
+
+    const img = new Image();
+    img.src = './kitten.jpg';
+    await new Promise(r => img.addEventListener('load', r));
+    ctx.drawImage(img, 0, 0);//, 800, 800/img.width*img.height);
+
+    function drawCalendarIcon(x, y, w = 20){
+      const h = 25;
+      ctx.moveTo(x, y);
+      ctx.fillStyle = 'red';
+      ctx.fillRect(x, y, w-1, 5);
+      ctx.strokeRect(x, y, w-1, 5);
+      ctx.strokeRect(x, y, w-1, 22);
+      ctx.fillStyle = 'black';
+      ctx.strokeRect(x+w/4, y-2, 1, 4);
+      ctx.strokeRect(x+3*w/4-2, y-2, 1, 4);
+    }
+
+    function drawBarGraph(x, y, items){
+      const h = 50;
+      const max = Math.max(...items);
+      const scale = h/max;
+      ctx.moveTo(x, y);
+      for (let i=0; i<items.length; i++) {
+        ctx.moveTo(x + i*10, y);
+        ctx.fillStyle = 'red';
+        ctx.fillRect(x+i*10, y+h, 8, -(items[i]*scale)|0);
+      }
+    }
+
+    drawCalendarIcon(10, 10);
+
+    drawBarGraph(10, 30, [5, 7, 9, 14, 10, 9, 8, 8, 9, 12, 17])
+
+    const floydSteinberg = [
+      [0/16,  'x', 7/16],
+      [3/16, 5/16, 1/16]
+    ];
+
+    const sierra = [
+      [0/32, 0/32,  'x', 5/32, 3/32],
+      [2/32, 4/32, 5/32, 4/32, 2/32],
+      [0/32, 2/32, 3/32, 2/32, 0/32]
+    ];
+
+    dither(sierra);
+
+    function dither(algorithm){
+      const width = canvas.width;
+      const height = canvas.height;
+      const center = algorithm[0].indexOf('x');
+      let imageData = ctx.getImageData(0, 0, width, height);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = (y * width + x)*4;
+          const oldPixel = [...imageData.data.subarray(i, i + 4)];
+
+          const newPixel = findClosestPaletteColor(...oldPixel);
+          imageData.data.set(newPixel, i);
+          const error = oldPixel.map((v, i) => v - newPixel[i]);
+
+          for (let r = 0; r < algorithm.length && y + r < height; r++) {
+            for (let c = 0; c < algorithm[r].length; c++){
+              if(c - center + x < 0) continue;
+              if(c - center + x >= width) continue;
+
+              const weight = algorithm[r][c];
+
+              if(weight != 'x'){
+                add(imageData.data.subarray(i + (r*width + c - center)*4), error, weight);
+              }
+            }
+          }
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function add(a, b, c){
+      for (let i=0; i<b.length; i++) {
+        a[i] += b[i]*c;
+      }
+    }
+
+    function findClosestPaletteColor(...pixel){
+      const palette = [
+        [0xff, 0xff, 0xff, 0xff],
+        [0x00, 0x00, 0x00, 0xff],
+        [0xff, 0x00, 0x00, 0xff]
+      ]
+
+      return palette
+        .map(p => ({p, rms: Math.sqrt(p
+          .map((v, i) => v - pixel[i])
+          .map(v => v*v)
+          .reduce((a, b) => a + b)/3)}))
+        .sort((a, b) => a.rms - b.rms)
+        [0].p;
+    }
+  </script>
+</body>
+</html>
