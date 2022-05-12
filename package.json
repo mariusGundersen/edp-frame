@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "ts": "tsc",
-    "list": "espruino --list",
+    "list": "espruino --listconfigs",
     "espruino": "espruino sleep.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
