@@ -5,6 +5,27 @@ var app = express();
 app.use(express.static("."));
 
 app.get("/data", (req, res) => {
+  var fs = require("fs"),
+    PNG = require("pngjs").PNG;
+
+  fs.createReadStream("in.png")
+    .pipe(new PNG())
+    .on("parsed", function () {
+      let buffer = new Uint8Array(((800 * 480) / 8) * 2);
+
+      for (var i = 0; i < this.data.length / 4; i++) {
+        if (this.data[i * 4] == 0xff && this.data[i * 4 + 1] == 0x00) {
+          buffer[48000 + Math.floor(i / 8)] |= 1 << (7 - (i % 8));
+        } else if (this.data[i * 4] == 0xff && this.data[i * 4 + 1] == 0xff) {
+          buffer[Math.floor(i / 8)] |= 1 << (7 - (i % 8));
+        }
+      }
+
+      res.end(Buffer.from(buffer), "binary");
+    });
+});
+
+app.get("/data2", (req, res) => {
   console.log("get data");
   let buffer = new Uint8Array(((800 * 480) / 8) * 2);
 
