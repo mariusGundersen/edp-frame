@@ -21,23 +21,23 @@ cs.set();
 setWatch((e) => console.log('busy', e.state, ((e.time - e.lastTime)*1000).toFixed(1)), busy, {repeat: true, edge: 'both', debounce: 10});
 
 function send(command, data) {
-    sendCommand(command);
-    if (data && data.length)
-        sendData(data);
+  sendCommand(command);
+  if (data && data.length)
+      sendData(data);
 }
 
 function sendCommand(command) {
-    dc.write(false);
-    cs.write(false);
-    spi.write(command);
-    cs.write(true);
+  dc.write(false);
+  cs.write(false);
+  spi.write(command);
+  cs.write(true);
 }
 
 function sendData(data) {
-    dc.write(true);
-    cs.write(false);
-    spi.write(data);
-    cs.write(true);
+  dc.write(true);
+  cs.write(false);
+  spi.write(data);
+  cs.write(true);
 }
 
 var edp = {

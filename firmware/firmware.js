@@ -79,7 +79,8 @@ Serial2.setup(115200, { rx: A3, tx: A2 });
 var wifi = require("ESP8266WiFi_0v25").connect(Serial2, function (err) {
   if (err) throw err;
   console.log("wifi on");
-  wifi.connect("---", "---", function (err) {
+  var config = require("./config.js");
+  wifi.connect(config.ssid, config.password, function (err) {
     if (err) throw err;
 
     console.log("wifi connected");
