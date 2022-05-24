@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "ts": "tsc",
     "watch": "tsc -w",
     "list": "espruino --listconfigs",
-    "espruino": "espruino firmware.js --sleep 10",
+    "espruino": "espruino",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -20,8 +21,5 @@
     "espruino": "^0.1.40",
     "typescript": "^4.6.4"
   },
-  "dependencies": {
-    "express": "^4.18.1",
-    "pngjs": "^6.0.0"
-  }
+  "dependencies": {}
 }
