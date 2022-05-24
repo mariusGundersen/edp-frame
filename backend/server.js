@@ -1,6 +1,7 @@
 import express from "express";
 import * as fs from "fs";
 import { PNG } from "pngjs";
+import dither, { sierra } from "./dither.js";
 import drawChart from "./electricity.js";
 
 var app = express();
@@ -59,6 +60,16 @@ app.get("/data", (req, res) => {
     });
 });
 
+app.get("/image", (req, res) => {
+  fs.createReadStream("./in.png")
+    .pipe(new PNG())
+    .on("parsed", function (data) {
+      dither(this, sierra);
+
+      this.pack().pipe(res);
+    });
+});
+
 app.get("/data2", (req, res) => {
   console.log("get data");
   let buffer = new Uint8Array(((800 * 480) / 8) * 2);
@@ -77,5 +88,7 @@ app.get("/data2", (req, res) => {
 
   res.end(Buffer.from(buffer), "binary");
 });
+
+app.get("/", (req, res) => res.end("hello"));
 
 app.listen(8080, () => console.log("listening"));

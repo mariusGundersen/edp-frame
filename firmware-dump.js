@@ -74,10 +74,8 @@ var edp = {
   },
 };
 
-var config = require("./config.js");
-
-B9.set(); // enable on Pico Shim V2
 Serial2.setup(115200, { rx: A3, tx: A2 });
+B9.set(); // enable on Pico Shim V2
 var wifi = require("ESP8266WiFi_0v25").connect(Serial2, function (err) {
   if (err) throw err;
 
@@ -85,14 +83,15 @@ var wifi = require("ESP8266WiFi_0v25").connect(Serial2, function (err) {
     B9.set();
     wifi.reset(function (err) {
       if (err) throw err;
+      //console.log('wifi on');
 
-      console.log("wifi on");
-      wifi.connect(config.ssid, config.password, function (err) {
+      wifi.connect("Hi-Fi", "RoxieSolkroken", function (err) {
         if (err) throw err;
 
-        console.log("wifi connected");
+        //console.log('wifi connected');
+
         edp.init().then(() => {
-          console.log("edp ready");
+          //console.log('edp ready');
           var req = require("http").request(
             {
               host: "192.168.1.110",
@@ -101,7 +100,9 @@ var wifi = require("ESP8266WiFi_0v25").connect(Serial2, function (err) {
               method: "GET",
             },
             function (res) {
-              console.log("data...");
+              //console.log('data...');
+              //setTime((new Date(res.headers.Date)).getTime()/1000);
+              ////console.log(new Date());
               sendCommand(0x10);
               var count = 0;
               res.on("data", (d) => {
@@ -117,22 +118,24 @@ var wifi = require("ESP8266WiFi_0v25").connect(Serial2, function (err) {
               });
               res.on("close", () => {
                 edp.refresh();
-                B9.reset();
                 watch(busy)
-                  .then(() => console.log("refresh done"))
+                  //.then(() => console.log('refresh done'))
                   .then(edp.sleep);
+                B9.reset();
               });
             }
           );
 
-          req.on("error", (e) => console.log(e));
+          //req.on('error', e => console.log(e));
           req.end();
         });
       });
     });
   }
+  setInterval(fetch, 2 * 60 * 1000);
 
   fetch();
-
-  setInterval(fetch, 60 * 1000);
 });
+
+setDeepSleep(1);
+setSleepIndicator(LED2);
