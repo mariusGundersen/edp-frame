@@ -1,0 +1,15 @@
+{
+  "name": "firmware",
+  "version": "1.0.0",
+  "description": "",
+  "main": "firmware.js",
+  "scripts": {
+    "espruino": "espruino"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "espruino": "^0.1.42"
+  }
+}
