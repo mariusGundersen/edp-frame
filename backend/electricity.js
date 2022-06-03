@@ -1,15 +1,16 @@
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+import { nb } from "date-fns/locale/index.js";
 import dither, { sierra } from "./dither.js";
 
 export default function drawChart() {
-  const width = 480;
-  const height = 400;
+  const width = 800;
+  const height = 480;
   const configuration = {
     type: "bar",
     data: {
       datasets: [
         {
-          label: "# of Votes",
+          label: "Strømpris",
           data: [
             {
               y: 2.3376,
@@ -309,7 +310,15 @@ export default function drawChart() {
     options: {
       scales: {
         xAxis: {
-          //type: "time",
+          type: "time",
+          time: {
+            unit: "hour",
+          },
+          adapters: {
+            date: {
+              locale: nb,
+            },
+          },
         },
       },
     },
@@ -336,7 +345,12 @@ export default function drawChart() {
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
     height,
+    plugins: {
+      globalVariableLegacy: ["chartjs-adapter-date-fns"],
+    },
     chartCallback(ChartJS) {
+      ChartJS.defaults.font.family = "sans-serif";
+      ChartJS.defaults.font.weight = "bold";
       ChartJS.defaults.responsive = true;
       ChartJS.defaults.maintainAspectRatio = false;
     },

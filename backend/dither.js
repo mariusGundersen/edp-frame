@@ -17,14 +17,15 @@ export const sierra = [
 export default function dither(imageData, algorithm) {
   const width = imageData.width;
   const height = imageData.height;
+  const data = new Uint8ClampedArray(imageData.data.buffer);
   const center = algorithm[0].indexOf("x");
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
-      const oldPixel = [...imageData.data.subarray(i, i + 4)];
+      const oldPixel = [...data.subarray(i, i + 4)];
 
       const newPixel = findClosestPaletteColor(...oldPixel);
-      imageData.data.set(newPixel, i);
+      data.set(newPixel, i);
       const error = oldPixel.map((v, i) => v - newPixel[i]);
 
       for (let r = 0; r < algorithm.length && y + r < height; r++) {
@@ -35,11 +36,7 @@ export default function dither(imageData, algorithm) {
           const weight = algorithm[r][c];
 
           if (weight != "x") {
-            add(
-              imageData.data.subarray(i + (r * width + c - center) * 4),
-              error,
-              weight
-            );
+            add(data.subarray(i + (r * width + c - center) * 4), error, weight);
           }
         }
       }
