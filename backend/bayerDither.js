@@ -1,4 +1,4 @@
-import findClosestPaletteColor from "./findClosestPaletteColor";
+import findClosestPaletteColor from "./findClosestPaletteColor.js";
 
 const palette = [
   [0xff, 0xff, 0xff, 0xff],
