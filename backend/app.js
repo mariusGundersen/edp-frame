@@ -9,28 +9,20 @@ app.use(express.static("."));
 app.get("/chart", async (req, res) => {
   drawChart().then(c => c.pipe(res));
 });
-app.get("/chart/pixels", async (req, res) => {
+app.get("/data", async (req, res) => {
   drawChart()
     .then(c => c
       .pipe(new PNG())
-      .on("parsed", (data) => {
-        const buffer = toPixels(data);
-        /*for (var i = 0; i < data.length / 4; i++) {
-          if (data[i * 4] == 0xff && data[i * 4 + 1] == 0x00) {
-            buffer[48000 + Math.floor(i / 8)] |= 1 << (7 - (i % 8));
-          } else if (data[i * 4] == 0xff && data[i * 4 + 1] == 0xff) {
-            buffer[Math.floor(i / 8)] |= 1 << (7 - (i % 8));
-          }
-        }*/
+      .on("parsed", () => {
+        const buffer = toPixels(this.data);
         res.end(Buffer.from(buffer), "binary");
       }));
 });
-app.get("/data", (req, res) => {
+app.get("/image/data", (req, res) => {
   fs.createReadStream("./in.png")
     .pipe(new PNG())
     .on("parsed", function () {
       dither(this, sierra);
-      console.log("fetch", new Date());
 
       const buffer = toPixels(this.data); //, (x, y) => x * 800 + y);
 
