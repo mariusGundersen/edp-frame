@@ -16,6 +16,8 @@
       /*image-rendering: crisp-edges;*/
       border: 20px solid burlywood;
       border-color: antiquewhite burlywood burlywood blanchedalmond;
+      /*font-smooth: never;
+      -webkit-font-smoothing: none;*/
     }
   </style>
 </head>
@@ -23,46 +25,119 @@
 <body>
   <canvas width="800" height="480"></canvas>
   <script type="module">
+
+
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      if (w < 2 * r) r = w / 2;
+      if (h < 2 * r) r = h / 2;
+      this.beginPath();
+      this.moveTo(x+r, y);
+      this.arcTo(x+w, y,   x+w, y+h, r);
+      this.arcTo(x+w, y+h, x,   y+h, r);
+      this.arcTo(x,   y+h, x,   y,   r);
+      this.arcTo(x,   y,   x+w, y,   r);
+      this.closePath();
+      return this;
+    }
+
     let canvas = document.querySelector("canvas");
-    let ctx = canvas.getContext("2d");
+    let ctx = canvas.getContext("2d", {alpha: false});
 
     ctx.imageSmoothingEnabled = false;
     ctx.mozImageSmoothingEnabled = false;
 
     ctx.translate(0.5, 0.5);
 
-    ctx.fillStyle = 'white'
+    ctx.fillStyle = '#fff'
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#888888';
-    ctx.fillRect(200, 40, 40, 40)
+    ctx.fillStyle = 'red';
+    ctx.fillRect(0, 160, 256*3, 20)
+    for(let i=0; i<256; i++){
+      const c = (i < 16 ? '0' : '')+i.toString(16);
+      ctx.fillStyle = `#${c}${c}${c}`;
+      ctx.fillRect(i*3, 100, 3, 20);
+    }
+    for(let i=0; i<256; i++){
+      const c = (i < 16 ? '0' : '')+i.toString(16);
+      ctx.fillStyle = `#${c}0000`;
+      ctx.fillRect(i*3, 120, 3, 20);
+    }
+    for(let i=0; i<256; i++){
+      const c = (i < 16 ? '0' : '')+i.toString(16);
+      ctx.fillStyle = `#ff${c}${c}`;
+      ctx.fillRect(i*3, 140, 3, 20);
+    }
+
+    await (new FontFace('Bookerly', 'url(./Bookerly-Regular.ttf)')).load().then(f => document.fonts.add(f));
+    //await (new FontFace('edp-font', 'url(./WenQuanYiMicroHei-01.ttf)')).load().then(f => document.fonts.add(f));
+    //await (new FontFace('edp-font', 'url(./WenQuanYiMicroHeiMono-02.ttf)')).load().then(f => document.fonts.add(f));
+    await (new FontFace('edp-font', 'url(./Retron2000.ttf)')).load().then(f => document.fonts.add(f));
+
+    ctx.fillStyle = 'black';
+    ctx.font = "24px edp-font";
+    ctx.fillText("I dag", 0.5, 200.5);
+    ctx.fillText("I morgen", 300.5, 200);
+    ctx.fillText("På mandag", 600, 200);
+
+    ctx.font = "18px edp-font";
+    let lines = getLines(ctx, "10:00 - 7 måneders kontroll på helsestasjon", 200);
+    let y = 220;
+    ctx.fillStyle = 'red';
+    ctx.roundRect(0, y - 15, 200, lines.length*15+5, 5);
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    for (const text of lines) {
+      ctx.fillText(text, 0, y);
+      y += 15;
+    }
 
     const img = new Image();
     img.src = './twins.jpg';
     await new Promise(r => img.addEventListener('load', r));
     ctx.drawImage(img, 0, 0, 800, 800 / img.width * img.height);
 
-    function drawCalendarIcon(x, y, w = 20) {
+
+    function getLines(ctx, text, maxWidth) {
+      const words = text.split(" ");
+      const lines = [];
+      let currentLine = words[0];
+
+      for (let i = 1; i < words.length; i++) {
+          const word = words[i];
+          const {width} = ctx.measureText(currentLine + " " + word);
+          if (width < maxWidth) {
+              currentLine += " " + word;
+          } else {
+              lines.push(currentLine);
+              currentLine = word;
+          }
+      }
+      lines.push(currentLine);
+      return lines;
+    }
+
+    function drawCalendarIcon(x, y, w = 20){
       const h = 25;
       ctx.moveTo(x, y);
       ctx.fillStyle = 'red';
-      ctx.fillRect(x, y, w - 1, 5);
-      ctx.strokeRect(x, y, w - 1, 5);
-      ctx.strokeRect(x, y, w - 1, 22);
+      ctx.fillRect(x, y, w-1, 5);
+      ctx.strokeRect(x, y, w-1, 5);
+      ctx.strokeRect(x, y, w-1, 22);
       ctx.fillStyle = 'black';
-      ctx.strokeRect(x + w / 4, y - 2, 1, 4);
-      ctx.strokeRect(x + 3 * w / 4 - 2, y - 2, 1, 4);
+      ctx.strokeRect(x+w/4, y-2, 1, 4);
+      ctx.strokeRect(x+3*w/4-2, y-2, 1, 4);
     }
 
-    function drawBarGraph(x, y, items) {
+    function drawBarGraph(x, y, items){
       const h = 50;
       const max = Math.max(...items);
-      const scale = h / max;
+      const scale = h/max;
       ctx.moveTo(x, y);
-      for (let i = 0; i < items.length; i++) {
-        ctx.moveTo(x + i * 10, y);
-        ctx.fillStyle = 'red';
-        ctx.fillRect(x + i * 10, y + h, 8, -(items[i] * scale) | 0);
+      for (let i=0; i<items.length; i++) {
+        ctx.moveTo(x + i*10, y);
+        ctx.fillStyle = `#ff8080`;
+        ctx.fillRect(x+i*10, y+h, 8, -(items[i]*scale)|0);
       }
     }
 
@@ -70,27 +145,84 @@
 
     //drawBarGraph(10, 30, [5, 7, 9, 14, 10, 9, 8, 8, 9, 12, 17])
 
+    function getMap(n){
+      return [...generateMap(n)].map(i => (i+1)/(n**2+1) - 0.5);
+
+      function* generateMap(n){
+        if(n == 1) {
+          yield 0;
+          return;
+        }
+
+        const ul = generateMap(n/2);
+        const ur = generateMap(n/2);
+        const bl = generateMap(n/2);
+        const br = generateMap(n/2);
+
+        for (let y=0; y<n/2; y++){
+          for (let x=0; x<n/2; x++){
+            yield ul.next().value*4;
+          }
+          for (let x=0; x<n/2; x++){
+            yield ur.next().value*4 + 2;
+          }
+        }
+
+        for (let y=0; y<n/2; y++){
+          for (let x=0; x<n/2; x++){
+            yield bl.next().value*4 + 3;
+          }
+          for (let x=0; x<n/2; x++){
+            yield br.next().value*4 + 1;
+          }
+        }
+      }
+
+    }
+
+    function bayer(imageData){
+      const width = imageData.width;
+      const height = imageData.height;
+      const map = getMap(4);
+
+      const ml = Math.sqrt(map.length);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = (y * width + x)*4;
+          const threshold = map[(y % ml)*ml + x % ml]*256;
+          var pixel = findClosestPaletteColor(
+            threshold + imageData.data[i+0],
+            threshold + imageData.data[i+1],
+            threshold + imageData.data[i+2],
+          )
+          imageData.data.set(pixel, i);
+        }
+      }
+
+      return imageData;
+    }
+
     const floydSteinberg = [
-      [0 / 16, 'x', 7 / 16],
-      [3 / 16, 5 / 16, 1 / 16]
+      [0/16,  'x', 7/16],
+      [3/16, 5/16, 1/16]
     ];
 
     const sierra = [
-      [0 / 32, 0 / 32, 'x', 5 / 32, 3 / 32],
-      [2 / 32, 4 / 32, 5 / 32, 4 / 32, 2 / 32],
-      [0 / 32, 2 / 32, 3 / 32, 2 / 32, 0 / 32]
+      [0/32, 0/32,  'x', 5/32, 3/32],
+      [2/32, 4/32, 5/32, 4/32, 2/32],
+      [0/32, 2/32, 3/32, 2/32, 0/32]
     ];
 
-    dither(sierra);
+    ctx.putImageData(bayer(ctx.getImageData(0, 0, canvas.width, canvas.height), sierra), 0, 0);
 
-    function dither(algorithm) {
-      const width = canvas.width;
-      const height = canvas.height;
+    function dither(imageData, algorithm){
+      const width = imageData.width;
+      const height = imageData.height;
       const center = algorithm[0].indexOf('x');
-      let imageData = ctx.getImageData(0, 0, width, height);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          const i = (y * width + x) * 4;
+          const i = (y * width + x)*4;
           const oldPixel = [...imageData.data.subarray(i, i + 4)];
 
           const newPixel = findClosestPaletteColor(...oldPixel);
@@ -98,44 +230,57 @@
           const error = oldPixel.map((v, i) => v - newPixel[i]);
 
           for (let r = 0; r < algorithm.length && y + r < height; r++) {
-            for (let c = 0; c < algorithm[r].length; c++) {
-              if (c - center + x < 0) continue;
-              if (c - center + x >= width) continue;
+            for (let c = 0; c < algorithm[r].length; c++){
+              if(c - center + x < 0) continue;
+              if(c - center + x >= width) continue;
 
               const weight = algorithm[r][c];
 
-              if (weight != 'x') {
-                add(imageData.data.subarray(i + (r * width + c - center) * 4), error, weight);
+              if(weight != 'x'){
+                add(imageData.data.subarray(i + (r*width + c - center)*4), error, weight);
               }
             }
           }
         }
       }
-      ctx.putImageData(imageData, 0, 0);
+
+      return imageData;
     }
 
-    function add(a, b, c) {
-      for (let i = 0; i < b.length; i++) {
-        a[i] += b[i] * c;
+    function add(a, b, c){
+      for (let i=0; i<b.length; i++) {
+        a[i] += b[i]*c;
       }
     }
 
-    function findClosestPaletteColor(...pixel) {
+    function findClosestPaletteColor(...pixel){
       const palette = [
         [0xff, 0xff, 0xff, 0xff],
         [0x00, 0x00, 0x00, 0xff],
-        [0xff, 0x00, 0x00, 0xff]
+        [0xff, 0x00, 0x00, 0xff],
+        //[0x00, 0xff, 0x00, 0xff],
+        //[0x00, 0x00, 0xff, 0xff]
       ]
 
-      return palette
-        .map(p => ({
-          p, rms: Math.sqrt(p
-            .map((v, i) => v - pixel[i])
-            .map(v => v * v)
-            .reduce((a, b) => a + b) / 3)
-        }))
-        .sort((a, b) => a.rms - b.rms)
-      [0].p;
+      let best = 0;
+      let lowest = diff(palette[0], pixel);
+
+      for(let i = 1; i < palette.length; i++){
+        let rms = diff(palette[i], pixel);
+
+        if (rms < lowest) {
+          lowest = rms;
+          best = i;
+        }
+      }
+
+      return palette[best];
+
+      function diff(a, b){
+        return Math.abs(a[0] - b[0])
+          + Math.abs(a[1] - b[1])
+          + Math.abs(a[2] - b[2]);
+      }
     }
   </script>
 </body>
