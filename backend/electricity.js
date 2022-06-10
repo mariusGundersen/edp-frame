@@ -95,11 +95,13 @@ export default async function drawChart() {
       globalVariableLegacy: ["chartjs-adapter-date-fns"],
     },
     chartCallback(ChartJS) {
-      ChartJS.defaults.font.family = "sans-serif";
-      ChartJS.defaults.font.weight = "bold";
+      ChartJS.defaults.font.family = "OpenSans-Regular";
       ChartJS.defaults.responsive = true;
       ChartJS.defaults.maintainAspectRatio = false;
     },
+  });
+  chartJSNodeCanvas.registerFont("./OpenSans-Regular.ttf", {
+    family: "OpenSans-Regular",
   });
   return chartJSNodeCanvas.renderToStream(
     {
