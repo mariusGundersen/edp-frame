@@ -5,18 +5,17 @@ import dither, { sierra } from "./dither.js";
 import drawChart from "./electricity.js";
 
 const app = express();
-app.use(express.static("."));
+//app.use(express.static("."));
 app.get("/chart", async (req, res) => {
-  drawChart().then(c => c.pipe(res));
+  drawChart().then((c) => c.pipe(res));
 });
 app.get("/data", async (req, res) => {
-  drawChart()
-    .then(c => c
-      .pipe(new PNG())
-      .on("parsed", () => {
-        const buffer = toPixels(this.data);
-        res.end(Buffer.from(buffer), "binary");
-      }));
+  drawChart().then((c) =>
+    c.pipe(new PNG()).on("parsed", function () {
+      const buffer = toPixels(this.data);
+      res.end(Buffer.from(buffer), "binary");
+    })
+  );
 });
 app.get("/image/data", (req, res) => {
   fs.createReadStream("./in.png")
