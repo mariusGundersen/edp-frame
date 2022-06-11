@@ -3,6 +3,8 @@ import { nb } from "date-fns/locale/index.js";
 import { request } from "https";
 import dither from "./bayerDither.js";
 
+process.env.TZ = "Europe/Amsterdam";
+
 async function fetch() {
   console.log("request");
 
@@ -100,7 +102,7 @@ export default async function drawChart() {
       ChartJS.defaults.maintainAspectRatio = false;
     },
   });
-  chartJSNodeCanvas.registerFont("./OpenSans-Regular.ttf", {
+  chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
     family: "OpenSans-Regular",
   });
   return chartJSNodeCanvas.renderToStream(
