@@ -27,10 +27,7 @@ function update() {
     .then(edp.init)
     .then(() => fetch(config.url))
     .then((response) => {
-      if (response.statusCode != "200")
-        throw new Error("Request failed " + response.statusCode);
-
-      setTime(new Date(response.headers.Date).getTime() / 1000);
+      // Don't write any code here! We don't want to miss any of the incoming packets
 
       let count = 0;
       edp.sendCommand(0x10);
@@ -46,7 +43,16 @@ function update() {
         }
       });
 
-      return new Promise((res) => response.on("close", res));
+      return new Promise((res, rej) =>
+        response.on("close", () => {
+          if (response.statusCode != "200") {
+            rej("Request failed " + response.statusCode);
+          } else {
+            setTime(new Date(response.headers.Date).getTime() / 1000);
+            res();
+          }
+        })
+      );
     })
     .then(edp.refresh)
     .then(edp.sleep);
