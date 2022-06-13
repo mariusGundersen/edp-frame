@@ -110,6 +110,17 @@ export default async function drawChart() {
     ...priceInfo.tomorrow,
   ];
 
+  const consumption = data.viewer.homes[0].consumption.nodes
+    .filter((d) => d.from >= prices[0].startsAt)
+    .map(c => ({
+      ...c,
+      ...prices.find(p => p.startsAt === c.from)
+    }));
+
+  for (const c of consumption) {
+    console.log(c.cost, (c.tax + c.energy) * c.consumption);
+  }
+
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
     height,
@@ -117,13 +128,13 @@ export default async function drawChart() {
       globalVariableLegacy: ["chartjs-adapter-date-fns"],
     },
     chartCallback(ChartJS) {
-      ChartJS.defaults.font.family = "OpenSans-Regular";
+      ChartJS.defaults.font.family = "OpenSans";
       ChartJS.defaults.responsive = true;
       ChartJS.defaults.maintainAspectRatio = false;
     },
   });
   chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
-    family: "OpenSans-Regular",
+    family: "OpenSans",
   });
   return toPixels(chartJSNodeCanvas.renderToBufferSync(
     {
@@ -147,16 +158,30 @@ export default async function drawChart() {
           {
             type: "bar",
             label: "Forbruk",
-            data: data.viewer.homes[0].consumption.nodes
-              .filter((d) => d.from >= prices[0].startsAt)
+            data: consumption
               .map((d) => ({
                 x: offset(d.from),
-                y: d.cost,
+                y: d.consumption * d.energy,
               })),
             borderColor: "black",
             backgroundColor: "grey",
             borderWidth: 2,
             order: 2,
+            stack: 'consumption'
+          },
+          {
+            type: "bar",
+            label: "Forbruk",
+            data: consumption
+              .map((d) => ({
+                x: offset(d.from),
+                y: d.consumption * d.tax,
+              })),
+            borderColor: "black",
+            backgroundColor: "grey",
+            borderWidth: 2,
+            order: 2,
+            stack: 'consumption'
           },
         ],
       },

@@ -2,10 +2,8 @@
   "appService.defaultWebAppToDeploy": "/subscriptions/9511872c-b297-45e1-a5f5-f7da5be41720/resourceGroups/rg-edp-frame/providers/Microsoft.Web/sites/edp-frame",
   "appService.deploySubpath": "backend",
   "azureFunctions.deploySubpath": "backend",
-  "azureFunctions.postDeployTask": "npm install (functions)",
   "azureFunctions.projectLanguage": "JavaScript",
   "azureFunctions.projectRuntime": "~4",
   "debug.internalConsoleOptions": "neverOpen",
-  "azureFunctions.preDeployTask": "npm prune (functions)",
   "appService.zipIgnorePattern": "node_modules"
 }
