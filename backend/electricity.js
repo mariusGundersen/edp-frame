@@ -125,15 +125,18 @@ export default async function drawChart() {
         datasets: [
           {
             type: "line",
+            fill: "origin",
             label: "Strømpris",
             data: prices.map((d) => ({
               x: d.startsAt,
               y: d.total,
             })),
             borderColor: "red",
+            backgroundColor: "pink",
             borderWidth: 3,
             tension: 0.5,
             pointRadius: 0,
+            order: 3,
           },
           {
             type: "bar",
@@ -141,12 +144,13 @@ export default async function drawChart() {
             data: data.viewer.homes[0].consumption.nodes
               .filter((d) => d.from >= prices[0].startsAt)
               .map((d) => ({
-                x: d.from,
+                x: offset(d.from),
                 y: d.cost,
               })),
-            borderColor: "black",
+            borderColor: "grey",
             backgroundColor: "grey",
             borderWidth: 2,
+            order: 2,
           },
         ],
       },
@@ -159,7 +163,9 @@ export default async function drawChart() {
         scales: {
           xAxis: {
             alignToPixels: true,
+            offset: false,
             grid: {
+              offset: false,
               borderColor: "black",
               color: "#888",
               tickColor: "black",
@@ -184,6 +190,7 @@ export default async function drawChart() {
             alignToPixels: true,
             grid: {
               borderColor: "black",
+              drawOnChartArea: true,
               color: "#888",
               tickColor: "black",
             },
@@ -202,6 +209,23 @@ export default async function drawChart() {
         },
       },
       plugins: [
+        /*{
+          afterDraw: (chart) => {
+            var xAxis = chart.scales["xAxis"];
+            console.log("xAxis", typeof xAxis);
+            var tickDistance = xAxis.width / (xAxis.ticks.length - 1);
+            xAxis.ticks.forEach((value, index) => {
+              if (index > 0) {
+                var x =
+                  -tickDistance + tickDistance * 0.66 + tickDistance * index;
+                var y = chart.height - 10;
+                chart.ctx.save();
+                chart.ctx.fillText(value.label, x, y);
+                chart.ctx.restore();
+              }
+            });
+          },
+        },*/
         {
           id: "background-colour",
           beforeDraw: (chart) => {
@@ -223,4 +247,10 @@ export default async function drawChart() {
     },
     "image/png"
   );
+}
+
+function offset(d) {
+  d = new Date(d);
+  d.setMinutes(30);
+  return d.toISOString();
 }
