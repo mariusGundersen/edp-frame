@@ -6,7 +6,6 @@ import dither from "./bayerDither.js";
 process.env.TZ = "Europe/Amsterdam";
 
 async function fetch() {
-  console.log("request");
 
   const token =
     process.env.TIBBER_TOKEN ??
@@ -25,7 +24,6 @@ async function fetch() {
         },
       },
       (r) => {
-        console.log(r.statusCode);
         let body = "";
         r.on("data", (chunk) => (body += chunk));
         r.on("end", () => {
@@ -117,10 +115,6 @@ export default async function drawChart() {
       ...prices.find(p => p.startsAt === c.from)
     }));
 
-  for (const c of consumption) {
-    console.log(c.cost, (c.tax + c.energy) * c.consumption);
-  }
-
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
     height,
@@ -203,14 +197,15 @@ export default async function drawChart() {
               tickColor: "black",
             },
             ticks: {
-              color: "black",
+              color: "black"
             },
             type: "time",
             time: {
-              stepSize: 3,
+              stepSize: 6,
               displayFormats: {
                 hour: "HH:mm",
-              },
+                day: 'd. MMMM'
+              }
             },
             adapters: {
               date: {
