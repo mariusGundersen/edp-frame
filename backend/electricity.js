@@ -64,15 +64,21 @@ async function fetch() {
               range(resolution: HOURLY, last: 48){
                 nodes{
                   total
+                  energy
+                  tax
                   startsAt
                 }
               }
               today {
                 total
+                energy
+                tax
                 startsAt
               }
               tomorrow {
                 total
+                energy
+                tax
                 startsAt
               }
             }
@@ -147,7 +153,7 @@ export default async function drawChart() {
                 x: offset(d.from),
                 y: d.cost,
               })),
-            borderColor: "grey",
+            borderColor: "black",
             backgroundColor: "grey",
             borderWidth: 2,
             order: 2,
@@ -167,6 +173,7 @@ export default async function drawChart() {
             grid: {
               offset: false,
               borderColor: "black",
+              borderWidth: 2,
               color: "#888",
               tickColor: "black",
             },
@@ -191,6 +198,7 @@ export default async function drawChart() {
             grid: {
               borderColor: "black",
               drawOnChartArea: true,
+              borderWidth: 2,
               color: "#888",
               tickColor: "black",
             },
