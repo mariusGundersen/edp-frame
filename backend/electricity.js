@@ -125,7 +125,7 @@ export default async function drawChart() {
   chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
     family: "OpenSans-Regular",
   });
-  return chartJSNodeCanvas.renderToStream(
+  return toPixels(chartJSNodeCanvas.renderToBufferSync(
     {
       data: {
         datasets: [
@@ -217,23 +217,6 @@ export default async function drawChart() {
         },
       },
       plugins: [
-        /*{
-          afterDraw: (chart) => {
-            var xAxis = chart.scales["xAxis"];
-            console.log("xAxis", typeof xAxis);
-            var tickDistance = xAxis.width / (xAxis.ticks.length - 1);
-            xAxis.ticks.forEach((value, index) => {
-              if (index > 0) {
-                var x =
-                  -tickDistance + tickDistance * 0.66 + tickDistance * index;
-                var y = chart.height - 10;
-                chart.ctx.save();
-                chart.ctx.fillText(value.label, x, y);
-                chart.ctx.restore();
-              }
-            });
-          },
-        },*/
         {
           id: "background-colour",
           beforeDraw: (chart) => {
@@ -253,12 +236,30 @@ export default async function drawChart() {
         },
       ],
     },
-    "image/png"
-  );
+    "raw"
+  ));
 }
 
 function offset(d) {
   d = new Date(d);
   d.setMinutes(30);
   return d.toISOString();
+}
+
+function toPixels(data, map = (x, y) => 480 * 800 - y * 800 - x) {
+  const buffer = new Uint8Array(((800 * 480) / 8) * 2);
+  var pixels = new Uint32Array(data.buffer);
+  for (let y = 0; y < 480; y++) {
+    for (let x = 0; x < 800; x++) {
+      const i = map(x, y);
+      const j = y * 800 + x;
+      const bgr = pixels[i] & 0xffffff;
+      if (bgr === 0xff0000) {
+        buffer[48000 + Math.floor(j / 8)] |= 1 << (7 - (j % 8));
+      } else if (bgr === 0xffffff) {
+        buffer[Math.floor(j / 8)] |= 1 << (7 - (j % 8));
+      }
+    }
+  }
+  return buffer;
 }
