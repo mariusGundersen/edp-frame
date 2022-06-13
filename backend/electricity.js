@@ -61,6 +61,12 @@ async function fetch() {
           currentSubscription {
             status
             priceInfo {
+              range(resolution: HOURLY, last: 48){
+                nodes{
+                  total
+                  startsAt
+                }
+              }
               today {
                 total
                 startsAt
@@ -85,9 +91,17 @@ export default async function drawChart() {
 
   const { data } = await fetch();
 
+  const priceInfo = data.viewer.homes[0].currentSubscription.priceInfo;
+
   const prices = [
-    ...data.viewer.homes[0].currentSubscription.priceInfo.today,
-    ...data.viewer.homes[0].currentSubscription.priceInfo.tomorrow,
+    ...priceInfo.range.nodes
+      .filter((_) => priceInfo.tomorrow.length === 0)
+      .filter((p) => p.startsAt < priceInfo.today[0].startsAt)
+      .reverse()
+      .filter((_, i) => i < 24)
+      .reverse(),
+    ...priceInfo.today,
+    ...priceInfo.tomorrow,
   ];
 
   const chartJSNodeCanvas = new ChartJSNodeCanvas({

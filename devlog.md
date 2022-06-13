@@ -8,8 +8,8 @@ Today I ordered a 7.5 inch e-ink display from waveshare! It is an 800x480 pixel 
 
 Two things I worked on today:
 
-* Testing deep sleep on the espruino
-* Implemented dithering algorithm for HTML5 canvas
+- Testing deep sleep on the espruino
+- Implemented dithering algorithm for HTML5 canvas
 
 I don't have the wifi board or the waveshare display yet, so there isn't much code that I can write for the firmware. One thing I wanted to test is the deep sleep of the espruino, for saving battery, and having it run from a spare power bank I have. By using a power bank I don't need to solder anything for a battery and I don't need any battery charging circuitry. But I need a dumb power bank, one that doesn't turn off if no or very little current is drawn. Luckily I found one I already had, which is also 5600mAh, which should last for a very long time, given that I don't draw any current when in deep sleep.
 
@@ -21,9 +21,9 @@ setInterval(function () {
   setTimeout(function () {
     digitalWrite(LED1, 0);
   }, 20);
-}, 60*1000);
+}, 60 * 1000);
 setDeepSleep(1);
-setSleepIndicator(LED2)
+setSleepIndicator(LED2);
 ```
 
 This deep sleeps the device when nothing happens, and it uses LED2 to indicate if it is sleeping or not. I just have to swap out the content of the `setInterval` function to what I want, and the interval delay to run every hour or once a day or something.
@@ -89,3 +89,9 @@ The current code is based on the existing modules and examples, and relies on ca
 With the firmware finally working I configured it to fetch data from an azure function rather than my laptop, and then I placed the frame connected to a battery on the shelf. The azure function simply returns the image that I've been testing with, so it's not very useful and I can't even see when it has updated. Instead I have to check the azure function logs and see when it has been called.
 
 Seems like something isn't working. The endpoint is called three times, then it's quiet. So there is still some more debugging to do.
+
+## 2022-06-12
+
+I tried to do something clever, but broke things again. There seems to be nothing I can do between receiving the http response and starting to listen for incoming data. If I put any code between there it will miss out on the first few incoming packets, and the image becomes either slightly or completely messed up. I found out this before, but forgot and made the same mistake again, as I was adding a check for the response statusCode. So now I have moved that code to the end of the response handler. It is the same with setting the current time. The internal clock is not very accurate, since it's not based on a chrystal (I should buy one and solder it on), so it drifts quickly. To compensate for this I use the Date resonse header to set the current time. But since I have to do it in the response end handler I get the wrong value. The Date header is set on the server when the response starts, but is used on the client after the entire response has been received and sent to the screen, which takes many seconds. So the internal time is always 10-15 seconds wrong.
+
+Another thing I fixed was to set it to trigger 10 past every hour, rather than on the hour. Since the clock drifts and is wrong anyways, it ended up making a request at x:59:##, and then again a few minutes later. And at that point the consumption info hadn't been updated yet, so I changed it to update 10 past every hour, so that it only does it once per hour and so that it gets the updated consumption info.
