@@ -1,99 +1,126 @@
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import { nb } from "date-fns/locale/index.js";
-import { request } from "https";
 import dither from "./bayerDither.js";
+import { fetchJson } from "./fetchJson.js";
+import getWeather from "./weather.js";
 
 process.env.TZ = "Europe/Amsterdam";
+const width = 800;
+const height = 480;
 
-async function fetch() {
+const chartJSNodeCanvas = new ChartJSNodeCanvas({
+  width,
+  height,
+  plugins: {
+    globalVariableLegacy: ["chartjs-adapter-date-fns"],
+  },
+  chartCallback(ChartJS) {
+    ChartJS.defaults.font.family = "OpenSans";
+    ChartJS.defaults.responsive = true;
+    ChartJS.defaults.maintainAspectRatio = false;
+
+    class Weather extends ChartJS.BubbleController {
+      draw() {
+        const meta = this.getMeta();
+        let i = 0;
+        for (const point of meta.data) {
+          const ctx = this.chart.ctx;
+          const { x, y } = point.getProps(['x', 'y']);
+          const icon = this._data[i].icon;
+          ctx.save();
+
+          ctx.textBaseline = 'top';
+          ctx.font = '60px yr';
+          ctx.fillStyle = 'black';
+          ctx.fillText(icon, x - 40, 10);
+
+          ctx.restore();
+          i++;
+        }
+      }
+    }
+
+    Weather.id = 'weather';
+    Weather.defaults = ChartJS.BubbleController.defaults;
+    ChartJS.register(Weather);
+  },
+});
+chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
+  family: "OpenSans",
+});
+chartJSNodeCanvas.registerFont("./icons/yr-icons.ttf", {
+  family: "yr",
+});
+
+async function getElectricity() {
 
   const token =
     process.env.TIBBER_TOKEN ??
     (await import("./config.js").then((c) => c.default.token));
 
-  return new Promise((res, rej) =>
-    request(
-      {
-        hostname: "api.tibber.com",
-        port: 443,
-        path: "/v1-beta/gql",
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + token,
-          "Content-Type": "application/json",
-        },
+  return await fetchJson(
+    {
+      hostname: "api.tibber.com",
+      port: 443,
+      path: "/v1-beta/gql",
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json",
       },
-      (r) => {
-        let body = "";
-        r.on("data", (chunk) => (body += chunk));
-        r.on("end", () => {
-          if (r.statusCode !== 200) return rej(body);
-          try {
-            res(JSON.parse(body));
-          } catch (error) {
-            rej(error);
-          }
-        });
-      }
-    )
-      .on("error", rej)
-      .end(
-        JSON.stringify({
-          operationName: null,
-          variables: null,
-          query: `{
-      viewer {
-        homes {
-          consumption(resolution: HOURLY, last: 48) {
-            nodes {
-              from
-              to
-              cost
-              unitPrice
-              unitPriceVAT
-              consumption
-              consumptionUnit
-              currency
+    },
+    JSON.stringify({
+      operationName: null,
+      variables: null,
+      query: `{
+        viewer {
+          homes {
+            consumption(resolution: HOURLY, last: 48) {
+              nodes {
+                from
+                to
+                cost
+                unitPrice
+                unitPriceVAT
+                consumption
+                consumptionUnit
+                currency
+              }
             }
-          }
-          currentSubscription {
-            status
-            priceInfo {
-              range(resolution: HOURLY, last: 48){
-                nodes{
+            currentSubscription {
+              status
+              priceInfo {
+                range(resolution: HOURLY, last: 48){
+                  nodes{
+                    total
+                    energy
+                    tax
+                    startsAt
+                  }
+                }
+                today {
+                  total
+                  energy
+                  tax
+                  startsAt
+                }
+                tomorrow {
                   total
                   energy
                   tax
                   startsAt
                 }
               }
-              today {
-                total
-                energy
-                tax
-                startsAt
-              }
-              tomorrow {
-                total
-                energy
-                tax
-                startsAt
-              }
             }
           }
         }
-      }
-    }`,
-        })
-      )
+      }`
+    })
   );
 }
 
 export default async function drawChart() {
-  const width = 800;
-  const height = 480;
-
-  const { data } = await fetch();
+  const { data } = await getElectricity();
 
   const priceInfo = data.viewer.homes[0].currentSubscription.priceInfo;
 
@@ -115,21 +142,10 @@ export default async function drawChart() {
       ...prices.find(p => p.startsAt === c.from)
     }));
 
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    plugins: {
-      globalVariableLegacy: ["chartjs-adapter-date-fns"],
-    },
-    chartCallback(ChartJS) {
-      ChartJS.defaults.font.family = "OpenSans";
-      ChartJS.defaults.responsive = true;
-      ChartJS.defaults.maintainAspectRatio = false;
-    },
-  });
-  chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
-    family: "OpenSans",
-  });
+  console.log(prices.find(p => !consumption.some(c => c.from === p.startsAt)));
+
+  const weather = await getWeather(prices.find(p => !consumption.some(c => c.from === p.startsAt)).startsAt, prices[prices.length - 1].startsAt);
+
   return toPixels(chartJSNodeCanvas.renderToBufferSync(
     {
       data: {
@@ -177,6 +193,15 @@ export default async function drawChart() {
             order: 2,
             stack: 'consumption'
           },
+          {
+            type: 'weather',
+            data: weather
+              .map(d => ({
+                x: offset(d.time, 0, 3),
+                icon: d.icon,
+                y: 0
+              }))
+          }
         ],
       },
       options: {
@@ -249,6 +274,7 @@ export default async function drawChart() {
           },
           afterDraw: (chart) => {
             const ctx = chart.ctx;
+
             var imageData = ctx.getImageData(0, 0, width, height);
             dither(imageData, 4);
             ctx.putImageData(imageData, 0, 0);
@@ -260,9 +286,10 @@ export default async function drawChart() {
   ));
 }
 
-function offset(d) {
+function offset(d, minutes = 30, hours = 0) {
   d = new Date(d);
   d.setMinutes(30);
+  d.setHours(d.getHours() + hours);
   return d.toISOString();
 }
 
