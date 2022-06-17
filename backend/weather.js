@@ -272,11 +272,67 @@ export default async function getWeather(from, to) {
   console.log(from, to);
 
   return json.properties.timeseries
-    .filter(t => new Date(t.time).getHours() % 6 == 0)
+    //.filter(t => new Date(t.time).getHours() % 6 == 0)
     .filter(t => Date.parse(t.time) >= Date.parse(from) && Date.parse(t.time) < Date.parse(to))
-    .filter(t => t.data.next_6_hours?.summary.symbol_code)
+    .filter(t => t.data.next_1_hours?.summary.symbol_code)
     .map(t => ({
       icon: iconsb[map[t.data.next_6_hours?.summary.symbol_code]],
+      tile: getTile(t.data),
+      temperature: t.data.instant.details.air_temperature,
       time: t.time
+    }))
+    .map((t, i, a) => ({
+      ...t,
+      tile: tiles[getTiledTile(t.tile, a[i - 1]?.tile ?? 'clear', a[i + 1]?.tile ?? 'clear')]
     }));
+}
+
+const tiles = {
+  "clear": [0, 0],
+  "clear start": [1, 0],
+  "clear end": [2, 0],
+  "fair start": [3, 0],
+  "fair end": [4, 0],
+  "fair both": [5, 0],
+  "cloudy": [0, 1],
+  "heavy rain": [1, 1],
+  "light rain": [2, 1],
+  "thunder": [3, 1],
+  "fair": [4, 1],
+  "clear both": [4, 1],
+}
+
+function getTiledTile(tile, pre, next) {
+  if (/clear|fair/.test(tile)) {
+    const before = !/clear|fair/.test(pre);
+    const after = !/clear|fair/.test(next);
+    if (before && after) {
+      return tile + ' both';
+    } else if (before) {
+      return tile + ' start';
+    } else if (after) {
+      return tile + ' end';
+    }
+  }
+  return tile;
+}
+
+function getTile(data) {
+  const cloudy = data.instant.details.cloud_area_fraction;
+  const rain = data.next_1_hours.details.probability_of_precipitation;
+  const thunder = data.next_1_hours.details.probability_of_thunder;
+
+  if (thunder > 20) {
+    return 'thunder';
+  } else if (rain > 50) {
+    return 'heavy rain';
+  } else if (rain > 10) {
+    return 'light rain';
+  } else if (cloudy > 50) {
+    return 'cloudy';
+  } else if (cloudy > 10) {
+    return 'fair';
+  } else {
+    return 'clear';
+  }
 }

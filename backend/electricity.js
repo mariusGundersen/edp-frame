@@ -1,3 +1,4 @@
+import canvas from "canvas";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import { nb } from "date-fns/locale/index.js";
 import dither from "./bayerDither.js";
@@ -8,49 +9,68 @@ process.env.TZ = "Europe/Amsterdam";
 const width = 800;
 const height = 480;
 
-const chartJSNodeCanvas = new ChartJSNodeCanvas({
-  width,
-  height,
-  plugins: {
-    globalVariableLegacy: ["chartjs-adapter-date-fns"],
-  },
-  chartCallback(ChartJS) {
-    ChartJS.defaults.font.family = "OpenSans";
-    ChartJS.defaults.responsive = true;
-    ChartJS.defaults.maintainAspectRatio = false;
+const chartJSNodeCanvas = (async function () {
+  const image = await canvas.loadImage('./icons/weather.png');
 
-    class Weather extends ChartJS.BubbleController {
-      draw() {
-        const meta = this.getMeta();
-        let i = 0;
-        for (const point of meta.data) {
-          const ctx = this.chart.ctx;
-          const { x, y } = point.getProps(['x', 'y']);
-          const icon = this._data[i].icon;
-          ctx.save();
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({
+    width,
+    height,
+    plugins: {
+      globalVariableLegacy: ["chartjs-adapter-date-fns"],
+    },
+    chartCallback(ChartJS) {
+      ChartJS.defaults.font.family = "OpenSans";
+      ChartJS.defaults.responsive = true;
+      ChartJS.defaults.maintainAspectRatio = false;
+      class Weather extends ChartJS.BarController {
+        draw() {
+          const meta = this.getMeta();
+          let i = 0;
+          for (const point of meta.data) {
+            const ctx = this.chart.ctx;
+            const { x, y, width } = point;
+            const { tile, temperature } = this._data[i];
 
-          ctx.textBaseline = 'top';
-          ctx.font = '60px yr';
-          ctx.fillStyle = 'black';
-          ctx.fillText(icon, x - 40, 10);
+            console.log(x, temperature);
+            ctx.save();
 
-          ctx.restore();
-          i++;
+            /*ctx.textBaseline = 'top';
+            ctx.font = `${width * 5}px yr`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'black';
+            ctx.fillText(icon, x - width, 20);*/
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(x - 8, 8, 16, 32);
+            ctx.drawImage(image, tile[0] * 16, tile[1] * 16, 16, 16, x - 8, 16, 16, 16);
+
+            if (i % 6 == 0) {
+              ctx.fillStyle = 'red';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'top';
+              ctx.fillText(`${Math.round(temperature)}°C`, x - 8, 40);
+            }
+
+            ctx.restore();
+            i++;
+          }
         }
       }
-    }
 
-    Weather.id = 'weather';
-    Weather.defaults = ChartJS.BubbleController.defaults;
-    ChartJS.register(Weather);
-  },
-});
-chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
-  family: "OpenSans",
-});
-chartJSNodeCanvas.registerFont("./icons/yr-icons.ttf", {
-  family: "yr",
-});
+      Weather.id = 'weather';
+      Weather.defaults = ChartJS.BarController.defaults;
+      ChartJS.register(Weather);
+    },
+  });
+  chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
+    family: "OpenSans",
+  });
+  chartJSNodeCanvas.registerFont("./icons/yr-icons.ttf", {
+    family: "yr",
+  });
+
+  return chartJSNodeCanvas;
+})();
 
 async function getElectricity() {
 
@@ -122,6 +142,8 @@ async function getElectricity() {
 export default async function drawChart() {
   const { data } = await getElectricity();
 
+  console.log(data);
+
   const priceInfo = data.viewer.homes[0].currentSubscription.priceInfo;
 
   const prices = [
@@ -142,11 +164,13 @@ export default async function drawChart() {
       ...prices.find(p => p.startsAt === c.from)
     }));
 
-  console.log(prices.find(p => !consumption.some(c => c.from === p.startsAt)));
-
   const weather = await getWeather(prices.find(p => !consumption.some(c => c.from === p.startsAt)).startsAt, prices[prices.length - 1].startsAt);
 
-  return toPixels(chartJSNodeCanvas.renderToBufferSync(
+  const maxPrice = Math.max(...consumption.map(p => p.consumption * p.energy));
+
+  const weatherPrice = maxPrice + maxPrice / 440 * 45;
+
+  const buffer = (await chartJSNodeCanvas).renderToBufferSync(
     {
       data: {
         datasets: [
@@ -197,17 +221,21 @@ export default async function drawChart() {
             type: 'weather',
             data: weather
               .map(d => ({
-                x: offset(d.time, 0, 3),
-                icon: d.icon,
-                y: 0
-              }))
+                ...d,
+                x: offset(d.time, 0, 0),
+                y: weatherPrice
+              })),
+            barPercentage: 1,
+            categoryPercentage: 1
           }
         ],
       },
       options: {
         layout: {
           padding: {
-            left: 0,
+            left: 6,
+            top: 0,
+            right: 0
           },
         },
         scales: {
@@ -250,7 +278,7 @@ export default async function drawChart() {
             ticks: {
               color: "black",
               callback(value) {
-                return "kr " + value.toFixed(2);
+                return value.toFixed(2);
               },
             },
           },
@@ -283,7 +311,9 @@ export default async function drawChart() {
       ],
     },
     "raw"
-  ));
+  );
+
+  return toPixels(buffer);
 }
 
 function offset(d, minutes = 30, hours = 0) {
