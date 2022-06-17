@@ -269,8 +269,6 @@ export default async function getWeather(from, to) {
     },
   });
 
-  console.log(from, to);
-
   return json.properties.timeseries
     //.filter(t => new Date(t.time).getHours() % 6 == 0)
     .filter(t => Date.parse(t.time) >= Date.parse(from) && Date.parse(t.time) < Date.parse(to))
