@@ -31,7 +31,7 @@ const chartJSNodeCanvas = (async function () {
             const { x, y, width } = point;
             const { tile, temperature } = this._data[i];
 
-            console.log(x, temperature);
+            console.log(x, y, temperature);
             ctx.save();
 
             /*ctx.textBaseline = 'top';
@@ -40,8 +40,6 @@ const chartJSNodeCanvas = (async function () {
             ctx.fillStyle = 'black';
             ctx.fillText(icon, x - width, 20);*/
 
-            ctx.fillStyle = 'white';
-            ctx.fillRect(x - 8, 8, 16, 32);
             ctx.drawImage(image, tile[0] * 16, tile[1] * 16, 16, 16, x - 8, 16, 16, 16);
 
             if (i % 6 == 0) {
@@ -142,8 +140,6 @@ async function getElectricity() {
 export default async function drawChart() {
   const { data } = await getElectricity();
 
-  console.log(data);
-
   const priceInfo = data.viewer.homes[0].currentSubscription.priceInfo;
 
   const prices = [
@@ -166,7 +162,7 @@ export default async function drawChart() {
 
   const weather = await getWeather(prices.find(p => !consumption.some(c => c.from === p.startsAt)).startsAt, prices[prices.length - 1].startsAt);
 
-  const maxPrice = Math.max(...consumption.map(p => p.consumption * p.energy));
+  const maxPrice = Math.max(...prices.map(p => p.total));
 
   const weatherPrice = maxPrice + maxPrice / 440 * 45;
 
