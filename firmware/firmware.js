@@ -8,6 +8,16 @@ function fetch(url) {
   );
 }
 
+Promise.prototype.finally = function (f) {
+  return this.then(
+    (x) => Promise.resolve(f()).then(() => x),
+    (x) =>
+      Promise.resolve(f()).then(() => {
+        throw x;
+      })
+  );
+};
+
 function delay(ms) {
   return new Promise((res) => setTimeout(res, ms));
 }
@@ -16,11 +26,24 @@ setDeepSleep(false);
 //setSleepIndicator(LED2);
 setSleepIndicator(undefined);
 
-B9.set();
 Serial2.setup(115200, { rx: A3, tx: A2 });
 const wifi = require("./firmware/ESP8266WiFi.js").setup(Serial2);
 
-function update() {
+function wait() {
+  var now = new Date();
+  var mins = 59 - now.getMinutes();
+  var secs = 59 - now.getSeconds();
+
+  mins += 10; //try to call 10 past every hour
+
+  return delay(secs * 1000 + mins * 60 * 1000);
+}
+
+
+
+function run() {
+  setDeepSleep(false);
+  wifi.enable();
   return wifi
     .reset()
     .then(() => wifi.connect(config.ssid, config.password))
@@ -54,28 +77,10 @@ function update() {
         })
       );
     })
+    .finally(wifi.disable)
     .then(edp.refresh)
-    .then(edp.sleep);
-}
-
-function wait() {
-  var now = new Date();
-  var mins = 59 - now.getMinutes();
-  var secs = 59 - now.getSeconds();
-
-  mins += 10; //try to call 10 past every hour
-
-  return delay(secs * 1000 + mins * 60 * 1000);
-}
-
-function run() {
-  setDeepSleep(false);
-  B9.set();
-  return update()
-    .then(() => {
-      B9.reset();
-      setDeepSleep(true);
-    })
+    .then(edp.sleep)
+    .finally(() => setDeepSleep(true))
     .catch((err) => {
       digitalPulse(LED1, 1, [100, 100, 100, 100, 100]);
       Storage.open("log", "a").write(`${new Date()}: Error: ${err}\n`);
