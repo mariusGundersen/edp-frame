@@ -60,7 +60,7 @@ true              : connected and ready
 
 // -----------------------------------------------------------------------------------
 var netCallbacks = {
-  create: function (host, port, type) {
+  create(host, port, type) {
     //console.log("CREATE ",arguments);
     if (!at) return -1; // disconnected
     /* Create a socket and return its index, host is a string, port is an integer.
@@ -119,7 +119,7 @@ var netCallbacks = {
     return sckt;
   },
   /* Close the socket. returns nothing */
-  close: function (sckt) {
+  close(sckt) {
     //console.log("CLOSE ",arguments);
     if (socks[sckt] == "Wait") socks[sckt] = "WaitClose";
     else if (socks[sckt] !== undefined) {
@@ -138,7 +138,7 @@ var netCallbacks = {
     }
   },
   /* Accept the connection on the server socket. Returns socket number or -1 if no connection */
-  accept: function () {
+  accept() {
     // console.log("Accept",sckt);
     for (var i = 0; i < MAXSOCKETS; i++)
       if (socks[i] == "Accept") {
@@ -150,7 +150,7 @@ var netCallbacks = {
   },
   /* Receive data. Returns a string (even if empty).
   If non-string returned, socket is then closed */
-  recv: function (sckt, maxLen) {
+  recv(sckt, maxLen) {
     if (sockData[sckt]) {
       var r;
       if (sockData[sckt].length > maxLen) {
@@ -169,7 +169,7 @@ var netCallbacks = {
   },
   /* Send data. Returns the number of bytes sent - 0 is ok.
   Less than 0  */
-  send: function (sckt, data, type) {
+  send(sckt, data, type) {
     if (!at) return -1; // disconnected
     if (at.isBusy() || socks[sckt] == "Wait") return 0;
     if (socks[sckt] < 0) return socks[sckt]; // report an error
@@ -278,14 +278,20 @@ function ipdHandler(line) {
 
 var wifiFuncs = {
   ipdHandler: ipdHandler,
-  debug: function () {
+  debug() {
     return {
       socks: socks,
       sockData: sockData,
     };
   },
+  enable() {
+    B9.set();
+  },
+  disable() {
+    B9.reset();
+  },
   // initialise the ESP8266
-  init: function () {
+  init() {
     return new Promise((res, rej) => {
       at.cmd("ATE0\r\n", 1000, function cb(d) {
         // turn off echo
@@ -304,7 +310,7 @@ var wifiFuncs = {
       });
     });
   },
-  reset: function () {
+  reset() {
     return new Promise((res, rej) => {
       at.cmd("\r\nAT+RST\r\n", 10000, function cb(d) {
         //console.log(">>>>>"+JSON.stringify(d));
@@ -318,13 +324,13 @@ var wifiFuncs = {
       });
     });
   },
-  getVersion: function (callback) {
+  getVersion(callback) {
     at.cmd("AT+GMR\r\n", 1000, function (d) {
       // works ok, but we could get more data
       callback(null, d);
     });
   },
-  connect: function (ssid, key) {
+  connect(ssid, key) {
     return new Promise((res, rej) => {
       at.cmd("AT+CWMODE=1\r\n", 1000, function (cwm) {
         if (cwm != "no change" && cwm != "OK")
@@ -354,7 +360,7 @@ var wifiFuncs = {
       });
     });
   },
-  getAPs: function (callback) {
+  getAPs(callback) {
     var aps = [];
     at.cmdReg(
       "AT+CWLAP\r\n",
@@ -374,7 +380,7 @@ var wifiFuncs = {
       }
     );
   },
-  getConnectedAP: function (callback) {
+  getConnectedAP(callback) {
     var con;
     at.cmdReg(
       "AT+CWJAP?\r\n",
@@ -388,7 +394,7 @@ var wifiFuncs = {
       }
     );
   },
-  createAP: function (ssid, key, channel, enc, callback) {
+  createAP(ssid, key, channel, enc, callback) {
     at.cmd("AT+CWMODE=2\r\n", 1000, function (cwm) {
       if (cwm != "no change" && cwm != "OK" && cwm != "WIFI DISCONNECT")
         callback("CWMODE failed: " + (cwm ? cwm : "Timeout"));
@@ -415,7 +421,7 @@ var wifiFuncs = {
         );
     });
   },
-  getConnectedDevices: function (callback) {
+  getConnectedDevices(callback) {
     var devs = [];
     this.at.cmd("AT+CWLIF\r\n", 1000, function r(d) {
       if (d == "OK") callback(null, devs);
@@ -427,7 +433,7 @@ var wifiFuncs = {
       }
     });
   },
-  getIP: function (callback) {
+  getIP(callback) {
     var ip;
     at.cmdReg(
       "AT+CIFSR\r\n",
@@ -444,12 +450,12 @@ var wifiFuncs = {
     );
   },
   /*  Set the name of the access point */
-  setHostname: function (hostname, callback) {
+  setHostname(hostname, callback) {
     at.cmd("AT+CWHOSTNAME=" + JSON.stringify(hostname) + "\r\n", 500, callback);
   },
   /* Ping the given address. Callback is called with the ping time
   in milliseconds, or undefined if there is an error */
-  ping: function (addr, callback) {
+  ping(addr, callback) {
     var time;
     at.cmd('AT+PING="' + addr + '"\r\n', 1000, function cb(d) {
       if (d && d[0] == "+") {
@@ -471,6 +477,7 @@ function sckClosed(ln) {
 }
 
 exports.setup = function (usart) {
+  wifiFuncs.enable();
   wifiFuncs.at = at = require("AT").connect(usart);
   require("NetworkJS").create(netCallbacks);
 
