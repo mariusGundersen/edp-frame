@@ -1,4 +1,5 @@
 import { fetchJson } from "./fetchJson.js";
+import getTiles from "./tiles.js";
 
 const map = {
   'clearsky_day': '01d',
@@ -262,12 +263,14 @@ export default async function getWeather(from, to) {
   const json = await fetchJson({
     hostname: "api.met.no",
     port: 443,
-    path: "/weatherapi/locationforecast/2.0/complete?lat=60&lon=11",
+    path: "/weatherapi/locationforecast/2.0/complete?lat=59.917&lon=10.817",
     method: "GET",
     headers: {
       'User-Agent': 'https://github.com/mariusGundersen/edp-frame'
     },
   });
+
+  const mapper = getTiles();
 
   return json.properties.timeseries
     //.filter(t => new Date(t.time).getHours() % 6 == 0)
@@ -281,7 +284,8 @@ export default async function getWeather(from, to) {
     }))
     .map((t, i, a) => ({
       ...t,
-      tile: tiles[getTiledTile(t.tile, a[i - 1]?.tile ?? 'clear', a[i + 1]?.tile ?? 'clear')]
+      //tile: tiles[getTiledTile(t.tile, a[i - 1]?.tile ?? 'clear', a[i + 1]?.tile ?? 'clear')]
+      tile: mapper(t.tile)
     }));
 }
 

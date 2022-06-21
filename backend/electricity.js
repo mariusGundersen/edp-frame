@@ -10,7 +10,7 @@ const width = 800;
 const height = 480;
 
 const chartJSNodeCanvas = (async function () {
-  const image = await canvas.loadImage('./icons/weather.png');
+  const image = await canvas.loadImage('./icons/weathertiles.png');
 
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
@@ -24,12 +24,14 @@ const chartJSNodeCanvas = (async function () {
       ChartJS.defaults.maintainAspectRatio = false;
       class Weather extends ChartJS.BarController {
         draw() {
+          const w = 16;
+          const h = 32;
           const meta = this.getMeta();
           let i = 0;
           for (const point of meta.data) {
             const ctx = this.chart.ctx;
             const { x, y, width } = point;
-            const { tile, temperature } = this._data[i];
+            const { tile, temperature, time } = this._data[i];
 
             console.log(x, y, temperature);
             ctx.save();
@@ -40,13 +42,14 @@ const chartJSNodeCanvas = (async function () {
             ctx.fillStyle = 'black';
             ctx.fillText(icon, x - width, 20);*/
 
-            ctx.drawImage(image, tile[0] * 16, tile[1] * 16, 16, 16, x - 8, 16, 16, 16);
+            ctx.drawImage(image, tile[0] * w, tile[1] * h, w, h, x - w / 2, h / 2, w, h);
 
-            if (i % 6 == 0) {
+            if (new Date(time).getHours() % 6 == 0) {
               ctx.fillStyle = 'red';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'top';
-              ctx.fillText(`${Math.round(temperature)}°C`, x - 8, 40);
+              ctx.font = '18px OpenSans'
+              ctx.fillText(`${Math.round(temperature)}°C`, x - 8, h * 1.5);
             }
 
             ctx.restore();
