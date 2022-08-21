@@ -10,7 +10,7 @@ const width = 800;
 const height = 480;
 
 const chartJSNodeCanvas = (async function () {
-  const image = await canvas.loadImage('./icons/weathertiles.png');
+  const image = await canvas.loadImage("./icons/weathertiles.png");
 
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
@@ -33,7 +33,6 @@ const chartJSNodeCanvas = (async function () {
             const { x, y, width } = point;
             const { tile, temperature, time } = this._data[i];
 
-            console.log(x, y, temperature);
             ctx.save();
 
             /*ctx.textBaseline = 'top';
@@ -42,13 +41,23 @@ const chartJSNodeCanvas = (async function () {
             ctx.fillStyle = 'black';
             ctx.fillText(icon, x - width, 20);*/
 
-            ctx.drawImage(image, tile[0] * w, tile[1] * h, w, h, x - w / 2, h / 2, w, h);
+            ctx.drawImage(
+              image,
+              tile[0] * w,
+              tile[1] * h,
+              w,
+              h,
+              x - w / 2,
+              h / 2,
+              w,
+              h
+            );
 
             if (new Date(time).getHours() % 6 == 0) {
-              ctx.fillStyle = 'red';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'top';
-              ctx.font = '18px OpenSans'
+              ctx.fillStyle = "red";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "top";
+              ctx.font = "18px OpenSans";
               ctx.fillText(`${Math.round(temperature)}°C`, x - 8, h * 1.5);
             }
 
@@ -58,7 +67,7 @@ const chartJSNodeCanvas = (async function () {
         }
       }
 
-      Weather.id = 'weather';
+      Weather.id = "weather";
       Weather.defaults = ChartJS.BarController.defaults;
       ChartJS.register(Weather);
     },
@@ -74,7 +83,6 @@ const chartJSNodeCanvas = (async function () {
 })();
 
 async function getElectricity() {
-
   const token =
     process.env.TIBBER_TOKEN ??
     (await import("./config.js").then((c) => c.default.token));
@@ -135,7 +143,7 @@ async function getElectricity() {
             }
           }
         }
-      }`
+      }`,
     })
   );
 }
@@ -158,16 +166,20 @@ export default async function drawChart() {
 
   const consumption = data.viewer.homes[0].consumption.nodes
     .filter((d) => d.from >= prices[0].startsAt)
-    .map(c => ({
+    .map((c) => ({
       ...c,
-      ...prices.find(p => p.startsAt === c.from)
+      ...prices.find((p) => p.startsAt === c.from),
     }));
 
-  const weather = await getWeather(prices.find(p => !consumption.some(c => c.from === p.startsAt)).startsAt, prices[prices.length - 1].startsAt);
+  const weather = await getWeather(
+    prices.find((p) => !consumption.some((c) => c.from === p.startsAt))
+      .startsAt,
+    prices[prices.length - 1].startsAt
+  );
 
-  const maxPrice = Math.max(...prices.map(p => p.total));
+  const maxPrice = Math.max(...prices.map((p) => p.total));
 
-  const weatherPrice = maxPrice + maxPrice / 440 * 45;
+  const weatherPrice = maxPrice + (maxPrice / 440) * 45;
 
   const buffer = (await chartJSNodeCanvas).renderToBufferSync(
     {
@@ -177,56 +189,68 @@ export default async function drawChart() {
             type: "line",
             fill: "origin",
             label: "Strømpris",
-            data: prices.map((d) => ({
-              x: d.startsAt,
-              y: d.total,
-            })),
+            data: prices
+              .reduce(
+                (prices, price) => [
+                  ...prices,
+                  {
+                    ...price,
+                    startsAt: price.startsAt.replace("00:00.", "10:00."),
+                  },
+                  {
+                    ...price,
+                    startsAt: price.startsAt.replace("00:00.", "50:00."),
+                  },
+                ],
+                []
+              )
+              .map((d) => ({
+                x: d.startsAt,
+                y: d.total,
+              })),
             borderColor: "red",
             backgroundColor: "pink",
             borderWidth: 3,
-            tension: 0.5,
+            tension: 0,
             pointRadius: 0,
             order: 3,
           },
           {
             type: "bar",
             label: "Forbruk",
-            data: consumption
-              .map((d) => ({
-                x: offset(d.from),
-                y: d.consumption * d.energy,
-              })),
+            data: consumption.map((d) => ({
+              x: offset(d.from),
+              y: d.consumption * d.energy,
+            })),
             borderColor: "black",
             backgroundColor: "grey",
             borderWidth: 2,
             order: 2,
-            stack: 'consumption'
+            stack: "consumption",
           },
           {
             type: "bar",
             label: "Forbruk",
-            data: consumption
-              .map((d) => ({
-                x: offset(d.from),
-                y: d.consumption * d.tax,
-              })),
+            data: consumption.map((d) => ({
+              x: offset(d.from),
+              y: d.consumption * d.tax,
+            })),
             borderColor: "black",
             backgroundColor: "grey",
             borderWidth: 2,
             order: 2,
-            stack: 'consumption'
+            stack: "consumption",
           },
           {
-            type: 'weather',
-            data: weather
-              .map(d => ({
-                ...d,
-                x: offset(d.time, 0, 0),
-                y: weatherPrice
-              })),
+            type: "weather",
+            data: weather.map((d) => ({
+              ...d,
+              x: offset(d.time, 0, 0),
+              y: weatherPrice,
+            })),
             barPercentage: 1,
-            categoryPercentage: 1
-          }
+            categoryPercentage: 1,
+          },
         ],
       },
       options: {
@@ -234,7 +258,7 @@ export default async function drawChart() {
           padding: {
             left: 6,
             top: 0,
-            right: 0
+            right: 0,
           },
         },
         scales: {
@@ -249,15 +273,15 @@ export default async function drawChart() {
               tickColor: "black",
             },
             ticks: {
-              color: "black"
+              color: "black",
             },
             type: "time",
             time: {
               stepSize: 6,
               displayFormats: {
                 hour: "HH:mm",
-                day: 'd. MMMM'
-              }
+                day: "d. MMMM",
+              },
             },
             adapters: {
               date: {

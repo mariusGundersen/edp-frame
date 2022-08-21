@@ -101,3 +101,11 @@ Another thing I fixed was to set it to trigger 10 past every hour, rather than o
 Battery isn't lasting as long as I expect. While thinking about I figured that I should disable the wifi before I start the refresh of the edp, so that the wifi is disabled while the screen updates, which can take 15-30 seconds. That should save some battery. While trying to implement this I realized that if the wifi fetching fails it never disables the wifi, and it doesn't go back to deep sleep. The reason is that I have that code in a `.then()`, but that isn't called, since it's a rejected promise. I should have that code in a `.finally()` so that it's run for all cases. But `.finally()` isn't implemented in espruino, so I need to polyfill it, and send a pull-request to espruino.
 
 While implementing this change I wanted to use some new features that I had made to espruino. Yes, I have some pull-requests that have been accepted and merged into v2.14 of the espruino firmware. But I couldn't get the firwmare to update on my machine. After some googling it turns out it might not work on some windows systems. Luckily it worked on my other laptop, so now I have the latest version.
+
+## 2022-06-22
+
+Still something isn't right, it doesn't always manage to connect. A reboot, by disconnecting and reconnecting the battery, seems to help though. I have a feeling I need to add a small dealy after turning on power to the wifi module and trying to connect, to get it to boot up propperly.
+
+## 2022-08-21
+
+It's been running over summer and works pretty well. I had to replace the single lipo battery with three AA batteries for it to last longer than a few days. Now it lasts at least three weeks, mayb more.
