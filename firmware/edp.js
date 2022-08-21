@@ -74,9 +74,7 @@ var edp = {
   },
   sleep: () => {
     edp.off();
-    setTimeout(() => {
-      edp.deepSleep();
-    }, 500);
+    return delay(500).then(() => edp.deepSleep());
   },
 };
 

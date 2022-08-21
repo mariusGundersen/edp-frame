@@ -34,18 +34,17 @@ function wait() {
   var mins = 59 - now.getMinutes();
   var secs = 59 - now.getSeconds();
 
-  mins += 10; //try to call 10 past every hour
+  mins += 15; //try to call 15 past every hour
 
   return delay(secs * 1000 + mins * 60 * 1000);
 }
 
-
-
 function run() {
   setDeepSleep(false);
   wifi.enable();
-  return wifi
-    .reset()
+  return delay(500)
+    .then(wifi.reset)
+    .then(() => delay(500))
     .then(() => wifi.connect(config.ssid, config.password))
     .then(edp.init)
     .then(() => fetch(config.url))
