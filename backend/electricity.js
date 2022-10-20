@@ -27,11 +27,36 @@ const chartJSNodeCanvas = (async function () {
           const w = 16;
           const h = 32;
           const meta = this.getMeta();
+          const data = this._data;
           let i = 0;
+
+          const temperatures = data.map((d) => d.temperature);
+
+          const maxTemp = temperatures.indexOf(Math.max(...temperatures));
+          const minTemp = temperatures.indexOf(Math.min(...temperatures));
+
+          const temps = [maxTemp, minTemp];
+
+          if (maxTemp < minTemp) {
+            temps.push(
+              temperatures.indexOf(
+                Math.max(...temperatures.slice(minTemp)),
+                minTemp
+              )
+            );
+          } else {
+            temps.push(
+              temperatures.indexOf(
+                Math.min(...temperatures.slice(maxTemp)),
+                maxTemp
+              )
+            );
+          }
+
           for (const point of meta.data) {
             const ctx = this.chart.ctx;
             const { x, y, width } = point;
-            const { tile, temperature, time } = this._data[i];
+            const { tile, temperature, time } = data[i];
 
             ctx.save();
 
@@ -53,7 +78,7 @@ const chartJSNodeCanvas = (async function () {
               h
             );
 
-            if (new Date(time).getHours() % 6 == 0) {
+            if (temps.includes(i)) {
               ctx.fillStyle = "red";
               ctx.textAlign = "center";
               ctx.textBaseline = "top";
@@ -277,10 +302,9 @@ export default async function drawChart() {
             },
             type: "time",
             time: {
-              stepSize: 6,
+              stepSize: 3,
               displayFormats: {
-                hour: "HH:mm",
-                day: "d. MMMM",
+                hour: "HH",
               },
             },
             adapters: {
