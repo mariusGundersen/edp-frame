@@ -2,6 +2,7 @@ import canvas from "canvas";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import { nb } from "date-fns/locale/index.js";
 import dither from "./bayerDither.js";
+import getDaylight from "./daylight.js";
 import { fetchJson } from "./fetchJson.js";
 import getWeather from "./weather.js";
 
@@ -22,7 +23,40 @@ const chartJSNodeCanvas = (async function () {
       ChartJS.defaults.font.family = "OpenSans";
       ChartJS.defaults.responsive = true;
       ChartJS.defaults.maintainAspectRatio = false;
+
+      class Daylight extends ChartJS.BarController {
+        static id = "daylight";
+        static defaults = ChartJS.BarController.defaults;
+        draw() {
+          const w = 16;
+          const h = 32;
+          const meta = this.getMeta();
+          const data = this._data;
+          let i = 0;
+
+          for (const hour of meta.data) {
+            const ctx = this.chart.ctx;
+            const { x, y, width } = hour;
+            const { time, light } = data[i];
+
+            ctx.save();
+
+            const color = Math.floor(light * 0xff).toString(16);
+
+            ctx.fillStyle = `#${color}${color}${color}`;
+
+            ctx.fillRect(x - w / 2, h / 2 - 6, w, h + 8);
+
+            ctx.restore();
+
+            i++;
+          }
+        }
+      }
+
       class Weather extends ChartJS.BarController {
+        static id = "weather";
+        static defaults = ChartJS.BarController.defaults;
         draw() {
           const w = 16;
           const h = 32;
@@ -83,7 +117,7 @@ const chartJSNodeCanvas = (async function () {
               ctx.textAlign = "center";
               ctx.textBaseline = "top";
               ctx.font = "18px OpenSans";
-              ctx.fillText(`${Math.round(temperature)}°C`, x - 8, h * 1.5);
+              ctx.fillText(`${Math.round(temperature)}°C`, x - w / 2, h * 1.5);
             }
 
             ctx.restore();
@@ -92,9 +126,8 @@ const chartJSNodeCanvas = (async function () {
         }
       }
 
-      Weather.id = "weather";
-      Weather.defaults = ChartJS.BarController.defaults;
       ChartJS.register(Weather);
+      ChartJS.register(Daylight);
     },
   });
   chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
@@ -197,10 +230,31 @@ export default async function drawChart() {
     }));
 
   const weather = await getWeather(
-    prices.find((p) => !consumption.some((c) => c.from === p.startsAt))
-      .startsAt,
+    prices[0].startsAt,
     prices[prices.length - 1].startsAt
   );
+
+  const sun = await getDaylight(
+    prices[0].startsAt.replace(/T.*/, ""),
+    new Date().getTimezoneOffset() == -120 ? "+02:00" : "+01:00"
+  );
+
+  console.log(sun);
+
+  const daylight = prices.map((p, i, prices) => ({
+    time: p.startsAt,
+    light: sun
+      .map((sun) =>
+        p.startsAt >= sun.sunrise && prices[i + 1]?.startsAt < sun.sunset
+          ? 1
+          : p.startsAt < sun.sunrise && prices[i + 1]?.startsAt >= sun.sunrise
+          ? 0.5
+          : p.startsAt < sun.sunset && prices[i + 1]?.startsAt > sun.sunset
+          ? 0.5
+          : 0
+      )
+      .reduce((a, b) => a + b, 0),
+  }));
 
   const maxPrice = Math.max(...prices.map((p) => p.total));
 
@@ -267,6 +321,15 @@ export default async function drawChart() {
             stack: "consumption",
           },
           {
+            type: "daylight",
+            data: daylight.map((d) => ({
+              ...d,
+              x: offset(d.time, 0, 0),
+              y: 0,
+            })),
+            order: 4,
+          },
+          {
             type: "weather",
             data: weather.map((d) => ({
               ...d,
@@ -275,6 +338,7 @@ export default async function drawChart() {
             })),
             barPercentage: 1,
             categoryPercentage: 1,
+            order: 3,
           },
         ],
       },
