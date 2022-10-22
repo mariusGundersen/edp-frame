@@ -16,5 +16,6 @@ export default async function getDaylight(date, offset) {
     .map((t) => ({
       sunrise: t.sunrise.time,
       sunset: t.sunset.time,
+      moonphase: t.moonphase?.value,
     }));
 }

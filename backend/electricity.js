@@ -37,7 +37,7 @@ const chartJSNodeCanvas = (async function () {
           for (const hour of meta.data) {
             const ctx = this.chart.ctx;
             const { x, y, width } = hour;
-            const { time, light } = data[i];
+            const { time, light, phase } = data[i];
 
             ctx.save();
 
@@ -45,7 +45,40 @@ const chartJSNodeCanvas = (async function () {
 
             ctx.fillStyle = `#${color}${color}${color}`;
 
-            ctx.fillRect(x - w / 2, h / 2 - 6, w, h + 8);
+            ctx.fillRect(x - w / 2, h / 2 - 6, w, h + 6);
+
+            if (i == 24) {
+              const t = Math.PI * 2;
+              const r = w / 2;
+              const y = h - h / 4;
+              ctx.beginPath();
+              // 0    25   50   75   100
+              // 🌑🌒🌓🌔🌕🌖🌗🌘🌑
+
+              //left edge
+              if (phase > 50) {
+                ctx.ellipse(x - w / 2, y, r, r, t / 4, 0, t / 2, false);
+              } else if (phase > 25) {
+                const rx = (r * (phase - 25)) / 25;
+                ctx.ellipse(x - w / 2, y, r, rx, t / 4, 0, t / 2, true);
+              } else {
+                const rx = (r * (25 - phase)) / 25;
+                ctx.ellipse(x - w / 2, y, r, rx, t / 4, 0, t / 2, false);
+              }
+              //right edge
+              if (phase <= 50) {
+                ctx.ellipse(x - w / 2, y, r, r, t / 4, t / 2, 0, true);
+              } else if (phase < 75) {
+                const rx = (r * (75 - phase)) / 25;
+                ctx.ellipse(x - w / 2, y, r, rx, t / 4, t / 2, 0, false);
+              } else {
+                const rx = (r * (phase - 75)) / 25;
+                ctx.ellipse(x - w / 2, y, r, rx, t / 4, t / 2, 0, true);
+              }
+
+              ctx.fillStyle = "white";
+              ctx.fill();
+            }
 
             ctx.restore();
 
@@ -239,10 +272,9 @@ export default async function drawChart() {
     new Date().getTimezoneOffset() == -120 ? "+02:00" : "+01:00"
   );
 
-  console.log(sun);
-
   const daylight = prices.map((p, i, prices) => ({
     time: p.startsAt,
+    phase: sun[0].moonphase,
     light: sun
       .map((sun) =>
         p.startsAt >= sun.sunrise && prices[i + 1]?.startsAt < sun.sunset
