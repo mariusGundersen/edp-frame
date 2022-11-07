@@ -51,29 +51,38 @@ const chartJSNodeCanvas = (async function () {
               const t = Math.PI * 2;
               const r = w / 2;
               const y = h - h / 4;
+              const phase = i * 2;
+
+              const semillipse = (rx = r, second = false) =>
+                ctx.ellipse(
+                  x - w / 2,
+                  y,
+                  r,
+                  Math.abs(rx),
+                  t / 4,
+                  second ? t / 2 : 0,
+                  second ? 0 : t / 2,
+                  rx < 0
+                );
+
               ctx.beginPath();
               // 0    25   50   75   100
               // 🌑🌒🌓🌔🌕🌖🌗🌘🌑
 
               //left edge
               if (phase > 50) {
-                ctx.ellipse(x - w / 2, y, r, r, t / 4, 0, t / 2, false);
-              } else if (phase > 25) {
-                const rx = (r * (phase - 25)) / 25;
-                ctx.ellipse(x - w / 2, y, r, rx, t / 4, 0, t / 2, true);
+                semillipse(r);
               } else {
-                const rx = (r * (25 - phase)) / 25;
-                ctx.ellipse(x - w / 2, y, r, rx, t / 4, 0, t / 2, false);
+                const rx = (r * (phase - 25)) / 25;
+                semillipse(rx);
               }
+
               //right edge
               if (phase <= 50) {
-                ctx.ellipse(x - w / 2, y, r, r, t / 4, t / 2, 0, true);
-              } else if (phase < 75) {
-                const rx = (r * (75 - phase)) / 25;
-                ctx.ellipse(x - w / 2, y, r, rx, t / 4, t / 2, 0, false);
+                semillipse(r, true);
               } else {
-                const rx = (r * (phase - 75)) / 25;
-                ctx.ellipse(x - w / 2, y, r, rx, t / 4, t / 2, 0, true);
+                const rx = (r * (75 - phase)) / 25;
+                semillipse(rx, true);
               }
 
               ctx.fillStyle = "white";
