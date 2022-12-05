@@ -51,7 +51,6 @@ const chartJSNodeCanvas = (async function () {
               const t = Math.PI * 2;
               const r = w / 2;
               const y = h - h / 4;
-              const phase = i * 2;
 
               const semillipse = (rx = r, second = false) =>
                 ctx.ellipse(
