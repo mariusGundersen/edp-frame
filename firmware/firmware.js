@@ -11,10 +11,7 @@ function fetch(url) {
 Promise.prototype.finally = function (f) {
   return this.then(
     (x) => Promise.resolve(f()).then(() => x),
-    (x) =>
-      Promise.resolve(f()).then(() => {
-        throw x;
-      })
+    (x) => Promise.resolve(f()).then(() => Promise.reject(x))
   );
 };
 
@@ -22,12 +19,8 @@ function delay(ms) {
   return new Promise((res) => setTimeout(res, ms));
 }
 
-setDeepSleep(false);
 //setSleepIndicator(LED2);
 setSleepIndicator(undefined);
-
-Serial2.setup(115200, { rx: A3, tx: A2 });
-const wifi = require("./firmware/ESP8266WiFi.js").setup(Serial2);
 
 function wait() {
   var now = new Date();
@@ -39,13 +32,23 @@ function wait() {
   return delay(secs * 1000 + mins * 60 * 1000);
 }
 
+Serial2.setup(115200, { rx: A3, tx: A2 });
+const wifi = require("./firmware/ESP8266WiFi.js").setup(Serial2);
+
+function log(message) {
+  Storage.open("log", "a").write(`${new Date()}: ${message}\n`);
+}
+
 function run() {
   setDeepSleep(false);
+  log("run");
+  //Serial2.setup(115200, { rx: A3, tx: A2 });
   wifi.enable();
   return delay(500)
     .then(wifi.reset)
     .then(() => delay(500))
     .then(() => wifi.connect(config.ssid, config.password))
+    .then(() => log("connected to wifi"))
     .then(edp.init)
     .then(() => fetch(config.url))
     .then((response) => {
@@ -76,27 +79,33 @@ function run() {
         })
       );
     })
-    .finally(wifi.disable)
+    .finally(() => {
+      wifi.disable();
+      //Serial2.unsetup();
+    })
+    .then(() => log("refresh"))
     .then(edp.refresh)
-    .then(edp.sleep)
+    .finally(edp.sleep)
     .finally(() => setDeepSleep(true))
     .catch((err) => {
       digitalPulse(LED1, 1, [100, 100, 100, 100, 100]);
-      Storage.open("log", "a").write(`${new Date()}: Error: ${err}\n`);
+      log(`Error: ${err}`);
     })
     .then(wait)
     .then(run);
 }
 
-run();
+setDeepSleep(true);
+setTimeout(run, 10_000);
 
 function getLog() {
   var logFile = Storage.open("log", "r");
-  var line;
+  var line = logFile.readLine();
   do {
     console.log(line);
     line = logFile.readLine();
   } while (line);
+  return "---[end]---";
 }
 
 function eraseLog() {
