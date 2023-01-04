@@ -39,18 +39,31 @@ function log(message) {
   Storage.open("log", "a").write(`${new Date()}: ${message}\n`);
 }
 
+function retry(attempts, task) {
+  return () => {
+    if (attempts == 0) return task();
+    return task().catch(retry(attempts - 1, task));
+  }
+}
+
 function run() {
   setDeepSleep(false);
   log("run");
   //Serial2.setup(115200, { rx: A3, tx: A2 });
   wifi.enable();
-  return delay(500)
+  return delay(1_000)
     .then(wifi.reset)
-    .then(() => delay(500))
-    .then(() => wifi.connect(config.ssid, config.password))
+    .then(() => delay(1_000))
+    .then(retry(5, () => wifi.connect(config.ssid, config.password)))
     .then(() => log("connected to wifi"))
-    .then(edp.init)
-    .then(() => fetch(config.url))
+    .then(retry(5, () => {
+      log("then: edp.init()");
+      return edp.init();
+    }))
+    .then(() => {
+      log(`then: fetch("${config.url}")`);
+      return fetch(config.url);
+    })
     .then((response) => {
       // Don't write any code here! We don't want to miss any of the incoming packets
 
@@ -80,16 +93,24 @@ function run() {
       );
     })
     .finally(() => {
+      log("finally: wifi.disable()");
       wifi.disable();
       //Serial2.unsetup();
     })
-    .then(() => log("refresh"))
-    .then(edp.refresh)
-    .finally(edp.sleep)
-    .finally(() => setDeepSleep(true))
+    .then(() => {
+      log("then: edp.refresh()");
+      return edp.refresh();
+    })
+    .finally(() => {
+      log("finally: edp.sleep()");
+      return edp.sleep();
+    })
+    .finally(() => {
+      log("finally: setDeepSleep(true)");
+      setDeepSleep(true);
+    })
     .catch((err) => {
-      digitalPulse(LED1, 1, [100, 100, 100, 100, 100]);
-      log(`Error: ${err}`);
+      log(`catch: ${err}`);
     })
     .then(wait)
     .then(run);
