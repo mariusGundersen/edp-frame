@@ -4,7 +4,7 @@ import { PNG } from "pngjs";
 import drawChart from "./electricity.js";
 
 const app = express()
-  .use(bodyParser.text())
+  .use(bodyParser.text({ type: "*/*" }))
   .get("/chart", async (req, res) => {
     drawChart().then((c) => {
       const png = new PNG({ width: 800, height: 480 });
@@ -16,7 +16,9 @@ const app = express()
     res.end(Buffer.from(await drawChart()), "binary");
   })
   .post("/data", async (req, res) => {
+    console.log("posted to data");
     console.log(req.body);
+    console.log("---end---");
     res.end(Buffer.from(await drawChart()), "binary");
   })
   .use(express.static("."))
