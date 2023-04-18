@@ -129,7 +129,7 @@ var netCallbacks = {
       else
         at.cmd(
           (sckt == MAXSOCKETS ? "AT+CIPSERVER=0" : "AT+CIPCLOSE=" + sckt) +
-            "\r\n",
+          "\r\n",
           1000,
           function () {
             socks[sckt] = undefined;
@@ -181,14 +181,14 @@ var netCallbacks = {
       socks[sckt] = "Wait";
       at.cmd(
         "AT+CIPSTART=" +
-          sckt +
-          ',"UDP","' +
-          d.ip +
-          '",' +
-          d.port +
-          "," +
-          d.port +
-          ",2\r\n",
+        sckt +
+        ',"UDP","' +
+        d.ip +
+        '",' +
+        d.port +
+        "," +
+        d.port +
+        ",2\r\n",
         10000,
         function (d) {
           if (d != "OK") socks[sckt] = -6; // SOCKET_ERR_NOT_FOUND
@@ -338,11 +338,11 @@ var wifiFuncs = {
         else
           at.cmd(
             "AT+CWJAP=" +
-              JSON.stringify(ssid) +
-              "," +
-              JSON.stringify(key) +
-              "\r\n",
-            20000,
+            JSON.stringify(ssid) +
+            "," +
+            JSON.stringify(key) +
+            "\r\n",
+            60000,
             function cb(d) {
               if (
                 [
@@ -404,14 +404,14 @@ var wifiFuncs = {
       else
         at.cmd(
           "AT+CWSAP=" +
-            JSON.stringify(ssid) +
-            "," +
-            JSON.stringify(key) +
-            "," +
-            channel +
-            "," +
-            encn +
-            "\r\n",
+          JSON.stringify(ssid) +
+          "," +
+          JSON.stringify(key) +
+          "," +
+          channel +
+          "," +
+          encn +
+          "\r\n",
           5000,
           function (cwm) {
             if (cwm != "OK")
@@ -480,7 +480,7 @@ exports.setup = function (usart) {
   wifiFuncs.enable();
   wifiFuncs.at = at = require("AT").connect(usart);
   require("NetworkJS").create(netCallbacks);
-
+  at.debug(false);
   at.register("+IPD", ipdHandler);
   at.registerLine("0,CONNECT", sckOpen);
   at.registerLine("1,CONNECT", sckOpen);

@@ -2,10 +2,21 @@ const config = require("./firmware/config.js");
 const Storage = require("Storage");
 const edp = require("./firmware/edp.js");
 
-function fetch(url) {
-  return new Promise((res, rej) =>
-    require("http").get(url, res).on("error", rej)
-  );
+function fetch(req) {
+  const options = url.parse(req);
+  options.method = 'POST';
+  return new Promise((res, rej) => {
+    const req = require("http").request(options, res);
+    req.on("error", rej);
+
+    var logFile = Storage.open("log", "r");
+    var line = logFile.readLine();
+    do {
+      req.write(line);
+      line = logFile.readLine();
+    } while (line);
+    req.end();
+  });
 }
 
 Promise.prototype.finally = function (f) {
@@ -54,14 +65,17 @@ function run() {
   return delay(1_000)
     .then(wifi.reset)
     .then(() => delay(1_000))
-    .then(retry(5, () => wifi.connect(config.ssid, config.password)))
+    .then(retry(5, () => {
+      log("wifi.connect()");
+      return wifi.connect(config.ssid, config.password);
+    }))
     .then(() => log("connected to wifi"))
     .then(retry(5, () => {
-      log("then: edp.init()");
+      log("edp.init()");
       return edp.init();
     }))
     .then(() => {
-      log(`then: fetch("${config.url}")`);
+      log(`fetch("${config.url}")`);
       return fetch(config.url);
     })
     .then((response) => {
@@ -83,10 +97,12 @@ function run() {
 
       return new Promise((res, rej) =>
         response.on("close", () => {
+          log("response.on(close)");
           if (response.statusCode != "200") {
             rej("Request failed " + response.statusCode);
           } else {
             setTime(new Date(response.headers.Date).getTime() / 1000);
+            eraseLog();
             res();
           }
         })
