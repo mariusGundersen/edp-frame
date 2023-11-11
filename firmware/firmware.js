@@ -5,17 +5,15 @@ const edp = require("./firmware/edp.js");
 function fetch(req) {
   const options = url.parse(req);
   options.method = 'POST';
+  options.headers = {
+    "Content-Type": "text/plain",
+    "Transfer-Encoding": "chunked",
+  }
   return new Promise((res, rej) => {
     const req = require("http").request(options, res);
     req.on("error", rej);
-
-    var logFile = Storage.open("log", "r");
-    var line = logFile.readLine();
-    do {
-      req.write(line);
-      line = logFile.readLine();
-    } while (line);
-    req.end();
+    const logFile = Storage.open("log", "r");
+    E.pipe(logFile, req, { chunkSize: 256 });
   });
 }
 
@@ -43,6 +41,7 @@ function wait() {
   return delay(secs * 1000 + mins * 60 * 1000);
 }
 
+A10.set(); //make sure to set esp-01 RST high;
 Serial2.setup(115200, { rx: A3, tx: A2 });
 const wifi = require("./firmware/ESP8266WiFi.js").setup(Serial2);
 
@@ -97,12 +96,12 @@ function run() {
 
       return new Promise((res, rej) =>
         response.on("close", () => {
-          log("response.on(close)");
           if (response.statusCode != "200") {
             rej("Request failed " + response.statusCode);
           } else {
-            setTime(new Date(response.headers.Date).getTime() / 1000);
             eraseLog();
+            log("response.on(close)");
+            setTime(new Date(response.headers.Date).getTime() / 1000);
             res();
           }
         })
