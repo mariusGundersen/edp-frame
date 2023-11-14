@@ -1,327 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulator</title>
-  <style>
-    @font-face {
-  font-family: 'yr-icons';
-  src:  url('icons/yr-icons.ttf?7ud25x') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulator</title>
+  </head>
+  <body>
+    <canvas width="800" height="480"></canvas>
+    <script type="module">
+      const response = await fetch("./data");
 
-div{
-  font-size: 40px;
-}
+      const data = new Uint8Array(await response.arrayBuffer());
 
-[class^="yr-icon-"], [class*=" yr-icon-"] {
-  /* use !important to prevent issues with browser extensions that change fonts */
-  font-family: 'yr-icons' !important;
-  speak: none;
-  font-style: normal;
-  font-weight: normal;
-  font-variant: normal;
-  text-transform: none;
-  line-height: 1;
+      /**
+       * @param {Uint8Array} input
+       */
+      function rle(input) {
+        let o = 0;
+        const output = new Int8Array(input.length + input.length / 128);
+        let headerPos = 0;
+        let status = null;
+        let i = 0;
+        while (i < input.length) {
+          let repeats = 1;
+          while (input[i] === input[i + repeats] && repeats < 128) {
+            repeats++;
+          }
+          if (repeats > 1) {
+            output[o++] = 1 - repeats;
+            output[o++] = input[i];
+            i += repeats;
+          } else {
+            const from = i + 1;
+            const headerPos = o++;
+            while (input[i] !== input[i + 1] && i - from < 127) {
+              output[o++] = input[i++];
+            }
+            output[headerPos] = i - from;
+          }
+        }
 
-  /* Better Font Rendering =========== */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+        return output.subarray(0, o);
+      }
 
-.yr-icon-01d:before {
-  content: "\e900";
-}
-.yr-icon-01m:before {
-  content: "\e901";
-}
-.yr-icon-01n:before {
-  content: "\e902";
-}
-.yr-icon-02d:before {
-  content: "\e903";
-}
-.yr-icon-02m:before {
-  content: "\e904";
-}
-.yr-icon-02n:before {
-  content: "\e905";
-}
-.yr-icon-03d:before {
-  content: "\e906";
-}
-.yr-icon-03m:before {
-  content: "\e907";
-}
-.yr-icon-03n:before {
-  content: "\e908";
-}
-.yr-icon-04:before {
-  content: "\e909";
-}
-.yr-icon-05d:before {
-  content: "\e90a";
-}
-.yr-icon-05m:before {
-  content: "\e90b";
-}
-.yr-icon-05n:before {
-  content: "\e90c";
-}
-.yr-icon-06d:before {
-  content: "\e90d";
-}
-.yr-icon-06m:before {
-  content: "\e90e";
-}
-.yr-icon-06n:before {
-  content: "\e90f";
-}
-.yr-icon-07d:before {
-  content: "\e910";
-}
-.yr-icon-07m:before {
-  content: "\e911";
-}
-.yr-icon-07n:before {
-  content: "\e912";
-}
-.yr-icon-08d:before {
-  content: "\e913";
-}
-.yr-icon-08m:before {
-  content: "\e914";
-}
-.yr-icon-08n:before {
-  content: "\e915";
-}
-.yr-icon-09:before {
-  content: "\e916";
-}
-.yr-icon-10:before {
-  content: "\e917";
-}
-.yr-icon-11:before {
-  content: "\e918";
-}
-.yr-icon-12:before {
-  content: "\e919";
-}
-.yr-icon-13:before {
-  content: "\e91a";
-}
-.yr-icon-14:before {
-  content: "\e91b";
-}
-.yr-icon-15:before {
-  content: "\e91c";
-}
-.yr-icon-20d:before {
-  content: "\e91d";
-}
-.yr-icon-20m:before {
-  content: "\e91e";
-}
-.yr-icon-20n:before {
-  content: "\e91f";
-}
-.yr-icon-21d:before {
-  content: "\e920";
-}
-.yr-icon-21m:before {
-  content: "\e921";
-}
-.yr-icon-21n:before {
-  content: "\e922";
-}
-.yr-icon-22:before {
-  content: "\e923";
-}
-.yr-icon-23:before {
-  content: "\e924";
-}
-.yr-icon-24d:before {
-  content: "\e925";
-}
-.yr-icon-24m:before {
-  content: "\e926";
-}
-.yr-icon-24n:before {
-  content: "\e927";
-}
-.yr-icon-25d:before {
-  content: "\e928";
-}
-.yr-icon-25m:before {
-  content: "\e929";
-}
-.yr-icon-25n:before {
-  content: "\e92a";
-}
-.yr-icon-26d:before {
-  content: "\e92b";
-}
-.yr-icon-26m:before {
-  content: "\e92c";
-}
-.yr-icon-26n:before {
-  content: "\e92d";
-}
-.yr-icon-27d:before {
-  content: "\e92e";
-}
-.yr-icon-27m:before {
-  content: "\e92f";
-}
-.yr-icon-27n:before {
-  content: "\e930";
-}
-.yr-icon-28d:before {
-  content: "\e931";
-}
-.yr-icon-28m:before {
-  content: "\e932";
-}
-.yr-icon-28n:before {
-  content: "\e933";
-}
-.yr-icon-29d:before {
-  content: "\e934";
-}
-.yr-icon-29m:before {
-  content: "\e935";
-}
-.yr-icon-29n:before {
-  content: "\e936";
-}
-.yr-icon-30:before {
-  content: "\e937";
-}
-.yr-icon-31:before {
-  content: "\e938";
-}
-.yr-icon-32:before {
-  content: "\e939";
-}
-.yr-icon-33:before {
-  content: "\e93a";
-}
-.yr-icon-34:before {
-  content: "\e93b";
-}
-.yr-icon-40d:before {
-  content: "\e93c";
-}
-.yr-icon-40m:before {
-  content: "\e93d";
-}
-.yr-icon-40n:before {
-  content: "\e93e";
-}
-.yr-icon-41d:before {
-  content: "\e93f";
-}
-.yr-icon-41m:before {
-  content: "\e940";
-}
-.yr-icon-41n:before {
-  content: "\e941";
-}
-.yr-icon-42d:before {
-  content: "\e942";
-}
-.yr-icon-42m:before {
-  content: "\e943";
-}
-.yr-icon-42n:before {
-  content: "\e944";
-}
-.yr-icon-43d:before {
-  content: "\e945";
-}
-.yr-icon-43m:before {
-  content: "\e946";
-}
-.yr-icon-43n:before {
-  content: "\e947";
-}
-.yr-icon-44d:before {
-  content: "\e948";
-}
-.yr-icon-44m:before {
-  content: "\e949";
-}
-.yr-icon-44n:before {
-  content: "\e94a";
-}
-.yr-icon-45d:before {
-  content: "\e94b";
-}
-.yr-icon-45m:before {
-  content: "\e94c";
-}
-.yr-icon-45n:before {
-  content: "\e94d";
-}
-.yr-icon-46:before {
-  content: "\e94e";
-}
-.yr-icon-47:before {
-  content: "\e94f";
-}
-.yr-icon-48:before {
-  content: "\e950";
-}
-.yr-icon-49:before {
-  content: "\e951";
-}
-.yr-icon-50:before {
-  content: "\e952";
-}
+      function rld(input, size) {
+        const output = new Uint8Array(size);
+        let o = 0;
+        let i = 0;
+        while (o < size) {
+          if (input[i] < 0) {
+            for (let repeat = 1 - input[i++]; repeat > 0; repeat--) {
+              output[o++] = input[i];
+            }
+            i++;
+          } else {
+            for (let actual = 1 + input[i++]; actual > 0; actual--) {
+              output[o++] = input[i++];
+            }
+          }
+        }
+        return output.subarray(0, o);
+      }
 
-  </style>
-</head>
-<body>
+      const arr = [];
+      for (let i = 0; i < 256; i++) {
+        arr[i] = i;
+      }
 
-  <canvas width="800" height="480"></canvas>
-  <div>
-    <span class="yr-icon-01d"></span>
-    <span class="yr-icon-01m"></span>
-    <span class="yr-icon-01n"></span>
-    <br>
-    <span class="yr-icon-02d"></span>
-    <span class="yr-icon-02m"></span>
-    <span class="yr-icon-02n"></span>
-    <br>
-    <span class="yr-icon-03d"></span>
-    <span class="yr-icon-03m"></span>
-    <span class="yr-icon-03n"></span>
-    <br>
-  </div>
-  <script type="module">
-    const response = await fetch('./data');
+      test([0, 0, 0, 1, 1, 1]);
+      test(arr);
+      test(data);
+      test(data.subarray(0, data.length / 2));
+      test(data.subarray(data.length / 2));
 
-    const data = new Uint8Array(await response.arrayBuffer());
+      function test(input) {
+        const compressed = rle(input);
+        const output = rld(compressed, input.length);
+        if (input.length !== output.length)
+          throw new Error(
+            `Lengths don't match! ${input.length} !== ${output.length}`
+          );
+        for (let i = 0; i < input.length; i++) {
+          if (input[i] !== output[i])
+            throw new Error(
+              `Mismatched at index ${i}, ${input[i]} !== ${output[i]}`
+            );
+        }
+        console.log(
+          `compressed from ${input.length} to ${compressed.length}, down to ${(
+            (compressed.length / input.length) *
+            100
+          ).toFixed(0)}%`
+        );
+      }
 
-    const canvas = document.querySelector('canvas');
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.getImageData(0, 0, 800, 480);
+      const canvas = document.querySelector("canvas");
+      const ctx = canvas.getContext("2d");
+      const imgData = ctx.getImageData(0, 0, 800, 480);
 
-    const pixels = new Uint32Array(imgData.data.buffer);
+      const pixels = new Uint32Array(imgData.data.buffer);
 
-    console.log(800*480, pixels.length, data.length)
+      console.log(800 * 480, pixels.length, data.length);
 
-    for(let i=0; i<800*480; i++){
-      pixels[800*480 - i] = (data[Math.floor(i/8)] >> (7-i%8)) & 1 == 1 ? 0xff_ff_ff_ff : 0xff_00_00_00;
-    }
-    for(let i=0; i<800*480; i++){
-      pixels[800*480 - i] = (data[Math.floor(480*100+i/8)] >> (7-i%8))&1 === 1 ? 0xff_00_00_ff : pixels[800*480 - i];
-    }
+      for (let i = 0; i < 800 * 480; i++) {
+        pixels[800 * 480 - i] =
+          (data[Math.floor(i / 8)] >> (7 - (i % 8))) & (1 == 1)
+            ? 0xff_ff_ff_ff
+            : 0xff_00_00_00;
+      }
+      for (let i = 0; i < 800 * 480; i++) {
+        pixels[800 * 480 - i] =
+          (data[Math.floor(480 * 100 + i / 8)] >> (7 - (i % 8))) & (1 === 1)
+            ? 0xff_00_00_ff
+            : pixels[800 * 480 - i];
+      }
 
-    ctx.putImageData(imgData, 0, 0);
-  </script>
-</body>
+      ctx.putImageData(imgData, 0, 0);
+    </script>
+  </body>
 </html>
