@@ -24,10 +24,10 @@ function edp() {
   const clk = B3;
   const din = B5;
 
-  busy.mode("input");
-  rst.mode("input");
-  dc.mode("input");
-  cs.mode("input");
+  rst.set();
+  busy.mode("input_pullup");
+  dc.reset();
+  cs.reset();
   clk.mode("input");
   din.mode("input");
 }

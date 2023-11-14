@@ -260,15 +260,7 @@ const icons = {
 }
 
 export default async function getWeather(from, to) {
-  const json = await fetchJson({
-    hostname: "api.met.no",
-    port: 443,
-    path: "/weatherapi/locationforecast/2.0/complete?lat=59.917&lon=10.817",
-    method: "GET",
-    headers: {
-      'User-Agent': 'https://github.com/mariusGundersen/edp-frame'
-    },
-  });
+  const json = await fetchJson(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=59.917&lon=10.817`);
 
   const mapper = getTiles();
 

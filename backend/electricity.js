@@ -1,5 +1,6 @@
-import canvas from "canvas";
-import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+import { createCanvas, loadImage, registerFont } from "canvas";
+import { BarController, Chart } from "chart.js/auto";
+import 'chartjs-adapter-date-fns';
 import { nb } from "date-fns/locale/index.js";
 import dither from "./bayerDither.js";
 import getDaylight from "./daylight.js";
@@ -10,241 +11,229 @@ process.env.TZ = "Europe/Amsterdam";
 const width = 800;
 const height = 480;
 
-const chartJSNodeCanvas = (async function () {
-  const image = await canvas.loadImage("./icons/weathertiles.png");
 
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    plugins: {
-      globalVariableLegacy: ["chartjs-adapter-date-fns"],
-    },
-    chartCallback(ChartJS) {
-      ChartJS.defaults.font.family = "OpenSans";
-      ChartJS.defaults.responsive = true;
-      ChartJS.defaults.maintainAspectRatio = false;
+const image = await loadImage("./icons/weathertiles.png");
 
-      class Daylight extends ChartJS.BarController {
-        static id = "daylight";
-        static defaults = ChartJS.BarController.defaults;
-        draw() {
-          const w = 16;
-          const h = 32;
-          const meta = this.getMeta();
-          const data = this._data;
-          let i = 0;
 
-          for (const hour of meta.data) {
-            const ctx = this.chart.ctx;
-            const { x, y, width } = hour;
-            const { time, light, phase } = data[i];
+const canvas = createCanvas(width, height);
+const ctx = canvas.getContext('2d');
 
-            ctx.save();
+Chart.defaults.font.family = "OpenSans";
+Chart.defaults.responsive = true;
+Chart.defaults.maintainAspectRatio = false;
 
-            const color = Math.floor(light * 0xff).toString(16);
+class Daylight extends BarController {
+  static id = "daylight";
+  static defaults = BarController.defaults;
+  draw() {
+    const w = 16;
+    const h = 32;
+    const meta = this.getMeta();
+    const data = this._data;
+    let i = 0;
 
-            ctx.fillStyle = `#${color}${color}${color}`;
+    for (const hour of meta.data) {
+      const ctx = this.chart.ctx;
+      const { x, y, width } = hour;
+      const { time, light, phase } = data[i];
 
-            ctx.fillRect(x - w / 2, h / 2 - 6, w, h + 6);
+      ctx.save();
 
-            if (i == 24) {
-              const t = Math.PI * 2;
-              const r = w / 2;
-              const y = h - h / 4;
+      const color = Math.floor(light * 0xff).toString(16);
 
-              const semillipse = (rx = r, second = false) =>
-                ctx.ellipse(
-                  x - w / 2,
-                  y,
-                  r,
-                  Math.abs(rx),
-                  t / 4,
-                  second ? t / 2 : 0,
-                  second ? 0 : t / 2,
-                  rx < 0
-                );
+      ctx.fillStyle = `#${color}${color}${color}`;
 
-              ctx.beginPath();
-              // 0    25   50   75   100
-              // 🌑🌒🌓🌔🌕🌖🌗🌘🌑
+      ctx.fillRect(x - w / 2, h / 2 - 6, w, h + 6);
 
-              //left edge
-              if (phase > 50) {
-                semillipse(r);
-              } else {
-                const rx = (r * (phase - 25)) / 25;
-                semillipse(rx);
-              }
+      if (i == 24) {
+        const t = Math.PI * 2;
+        const r = w / 2;
+        const y = h - h / 4;
 
-              //right edge
-              if (phase <= 50) {
-                semillipse(r, true);
-              } else {
-                const rx = (r * (75 - phase)) / 25;
-                semillipse(rx, true);
-              }
+        const semillipse = (rx = r, second = false) =>
+          ctx.ellipse(
+            x - w / 2,
+            y,
+            r,
+            Math.abs(rx),
+            t / 4,
+            second ? t / 2 : 0,
+            second ? 0 : t / 2,
+            rx < 0
+          );
 
-              ctx.fillStyle = "white";
-              ctx.fill();
-            }
+        ctx.beginPath();
+        // 0    25   50   75   100
+        // 🌑🌒🌓🌔🌕🌖🌗🌘🌑
 
-            ctx.restore();
-
-            i++;
-          }
+        //left edge
+        if (phase > 50) {
+          semillipse(r);
+        } else {
+          const rx = (r * (phase - 25)) / 25;
+          semillipse(rx);
         }
+
+        //right edge
+        if (phase <= 50) {
+          semillipse(r, true);
+        } else {
+          const rx = (r * (75 - phase)) / 25;
+          semillipse(rx, true);
+        }
+
+        ctx.fillStyle = "white";
+        ctx.fill();
       }
 
-      class Weather extends ChartJS.BarController {
-        static id = "weather";
-        static defaults = ChartJS.BarController.defaults;
-        draw() {
-          const w = 16;
-          const h = 32;
-          const meta = this.getMeta();
-          const data = this._data;
-          let i = 0;
+      ctx.restore();
 
-          const temperatures = data.map((d) => d.temperature);
+      i++;
+    }
+  }
+}
 
-          const maxTemp = temperatures.indexOf(Math.max(...temperatures));
-          const minTemp = temperatures.indexOf(Math.min(...temperatures));
+class Weather extends BarController {
+  static id = "weather";
+  static defaults = BarController.defaults;
+  draw() {
+    const w = 16;
+    const h = 32;
+    const meta = this.getMeta();
+    const data = this._data;
+    let i = 0;
 
-          const temps = [maxTemp, minTemp];
+    const temperatures = data.map((d) => d.temperature);
 
-          if (maxTemp < minTemp) {
-            temps.push(
-              temperatures.indexOf(
-                Math.max(...temperatures.slice(minTemp)),
-                minTemp
-              )
-            );
-          } else {
-            temps.push(
-              temperatures.indexOf(
-                Math.min(...temperatures.slice(maxTemp)),
-                maxTemp
-              )
-            );
-          }
+    const maxTemp = temperatures.indexOf(Math.max(...temperatures));
+    const minTemp = temperatures.indexOf(Math.min(...temperatures));
 
-          for (const point of meta.data) {
-            const ctx = this.chart.ctx;
-            const { x, y, width } = point;
-            const { tile, temperature, time } = data[i];
+    const temps = [maxTemp, minTemp];
 
-            ctx.save();
+    if (maxTemp < minTemp) {
+      temps.push(
+        temperatures.indexOf(
+          Math.max(...temperatures.slice(minTemp)),
+          minTemp
+        )
+      );
+    } else {
+      temps.push(
+        temperatures.indexOf(
+          Math.min(...temperatures.slice(maxTemp)),
+          maxTemp
+        )
+      );
+    }
 
-            /*ctx.textBaseline = 'top';
-            ctx.font = `${width * 5}px yr`;
-            ctx.textAlign = 'center';
-            ctx.fillStyle = 'black';
-            ctx.fillText(icon, x - width, 20);*/
+    for (const point of meta.data) {
+      const ctx = this.chart.ctx;
+      const { x, y, width } = point;
+      const { tile, temperature, time } = data[i];
 
-            ctx.drawImage(
-              image,
-              tile[0] * w,
-              tile[1] * h,
-              w,
-              h,
-              x - w / 2,
-              h / 2,
-              w,
-              h
-            );
+      ctx.save();
 
-            if (temps.includes(i)) {
-              ctx.fillStyle = "red";
-              ctx.textAlign = "center";
-              ctx.textBaseline = "top";
-              ctx.font = "18px OpenSans";
-              ctx.fillText(`${Math.round(temperature)}°C`, x - w / 2, h * 1.5);
-            }
+      /*ctx.textBaseline = 'top';
+      ctx.font = `${width * 5}px yr`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'black';
+      ctx.fillText(icon, x - width, 20);*/
 
-            ctx.restore();
-            i++;
-          }
-        }
+      ctx.drawImage(
+        image,
+        tile[0] * w,
+        tile[1] * h,
+        w,
+        h,
+        x - w / 2,
+        h / 2,
+        w,
+        h
+      );
+
+      if (temps.includes(i)) {
+        ctx.fillStyle = "red";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.font = "18px OpenSans";
+        ctx.fillText(`${Math.round(temperature)}°C`, x - w / 2, h * 1.5);
       }
 
-      ChartJS.register(Weather);
-      ChartJS.register(Daylight);
-    },
-  });
-  chartJSNodeCanvas.registerFont("./OpenSans-ExtraBold.ttf", {
-    family: "OpenSans",
-  });
-  chartJSNodeCanvas.registerFont("./icons/yr-icons.ttf", {
-    family: "yr",
-  });
+      ctx.restore();
+      i++;
+    }
+  }
+}
 
-  return chartJSNodeCanvas;
-})();
+Chart.register(Weather);
+Chart.register(Daylight);
+registerFont("./OpenSans-ExtraBold.ttf", {
+  family: "OpenSans",
+});
+registerFont("./icons/yr-icons.ttf", {
+  family: "yr",
+});
 
 async function getElectricity() {
   const token =
     process.env.TIBBER_TOKEN ??
     (await import("./config.js").then((c) => c.default.token));
 
-  return await fetchJson(
+  return await fetchJson("https://api.tibber.com/v1-beta/gql",
     {
-      hostname: "api.tibber.com",
-      port: 443,
-      path: "/v1-beta/gql",
       method: "POST",
       headers: {
         Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
-    },
-    JSON.stringify({
-      operationName: null,
-      variables: null,
-      query: `{
-        viewer {
-          homes {
-            consumption(resolution: HOURLY, last: 48) {
-              nodes {
-                from
-                to
-                cost
-                unitPrice
-                unitPriceVAT
-                consumption
-                consumptionUnit
-                currency
+      body: JSON.stringify({
+        operationName: null,
+        variables: null,
+        query: `{
+          viewer {
+            homes {
+              consumption(resolution: HOURLY, last: 48) {
+                nodes {
+                  from
+                  to
+                  cost
+                  unitPrice
+                  unitPriceVAT
+                  consumption
+                  consumptionUnit
+                  currency
+                }
               }
-            }
-            currentSubscription {
-              status
-              priceInfo {
-                range(resolution: HOURLY, last: 48){
-                  nodes{
+              currentSubscription {
+                status
+                priceInfo {
+                  range(resolution: HOURLY, last: 48){
+                    nodes{
+                      total
+                      energy
+                      tax
+                      startsAt
+                    }
+                  }
+                  today {
+                    total
+                    energy
+                    tax
+                    startsAt
+                  }
+                  tomorrow {
                     total
                     energy
                     tax
                     startsAt
                   }
                 }
-                today {
-                  total
-                  energy
-                  tax
-                  startsAt
-                }
-                tomorrow {
-                  total
-                  energy
-                  tax
-                  startsAt
-                }
               }
             }
           }
-        }
-      }`,
-    })
-  );
+        }`,
+      })
+    });
 }
 
 export default async function drawChart() {
@@ -276,8 +265,7 @@ export default async function drawChart() {
   );
 
   const sun = await getDaylight(
-    prices[0].startsAt.replace(/T.*/, ""),
-    new Date().getTimezoneOffset() == -120 ? "+02:00" : "+01:00"
+    prices.map(p => p.startsAt).filter(t => /T00:00:00/.test(t))
   );
 
   const daylight = prices.map((p, i, prices) => ({
@@ -288,10 +276,10 @@ export default async function drawChart() {
         p.startsAt >= sun.sunrise && prices[i + 1]?.startsAt < sun.sunset
           ? 1
           : p.startsAt < sun.sunrise && prices[i + 1]?.startsAt >= sun.sunrise
-          ? 0.5
-          : p.startsAt < sun.sunset && prices[i + 1]?.startsAt > sun.sunset
-          ? 0.5
-          : 0
+            ? 0.5
+            : p.startsAt < sun.sunset && prices[i + 1]?.startsAt > sun.sunset
+              ? 0.5
+              : 0
       )
       .reduce((a, b) => a + b, 0),
   }));
@@ -300,169 +288,172 @@ export default async function drawChart() {
 
   const weatherPrice = maxPrice + (maxPrice / 440) * 45;
 
-  const buffer = (await chartJSNodeCanvas).renderToBufferSync(
-    {
-      data: {
-        datasets: [
-          {
-            type: "line",
-            fill: "origin",
-            label: "Strømpris",
-            data: prices
-              .reduce(
-                (prices, price) => [
-                  ...prices,
-                  {
-                    ...price,
-                    startsAt: price.startsAt.replace("00:00.", "10:00."),
-                  },
-                  {
-                    ...price,
-                    startsAt: price.startsAt.replace("00:00.", "50:00."),
-                  },
-                ],
-                []
-              )
-              .map((d) => ({
-                x: d.startsAt,
-                y: d.total,
-              })),
-            borderColor: "red",
-            backgroundColor: "pink",
-            borderWidth: 3,
-            tension: 0,
-            pointRadius: 0,
-            order: 3,
-          },
-          {
-            type: "bar",
-            label: "Forbruk",
-            data: consumption.map((d) => ({
-              x: offset(d.from),
-              y: d.consumption * d.energy,
-            })),
-            borderColor: "black",
-            backgroundColor: "grey",
-            borderWidth: 2,
-            order: 2,
-            stack: "consumption",
-          },
-          {
-            type: "bar",
-            label: "Forbruk",
-            data: consumption.map((d) => ({
-              x: offset(d.from),
-              y: d.consumption * d.tax,
-            })),
-            borderColor: "black",
-            backgroundColor: "grey",
-            borderWidth: 2,
-            order: 2,
-            stack: "consumption",
-          },
-          {
-            type: "daylight",
-            data: daylight.map((d) => ({
-              ...d,
-              x: offset(d.time, 0, 0),
-              y: 0,
-            })),
-            order: 4,
-          },
-          {
-            type: "weather",
-            data: weather.map((d) => ({
-              ...d,
-              x: offset(d.time, 0, 0),
-              y: weatherPrice,
-            })),
-            barPercentage: 1,
-            categoryPercentage: 1,
-            order: 3,
-          },
-        ],
-      },
-      options: {
-        layout: {
-          padding: {
-            left: 6,
-            top: 0,
-            right: 0,
-          },
-        },
-        scales: {
-          xAxis: {
-            alignToPixels: true,
-            offset: false,
-            grid: {
-              offset: false,
-              borderColor: "black",
-              borderWidth: 2,
-              color: "#888",
-              tickColor: "black",
-            },
-            ticks: {
-              color: "black",
-            },
-            type: "time",
-            time: {
-              stepSize: 3,
-              displayFormats: {
-                hour: "HH",
-              },
-            },
-            adapters: {
-              date: {
-                locale: nb,
-              },
-            },
-          },
-          yAxis: {
-            alignToPixels: true,
-            grid: {
-              borderColor: "black",
-              drawOnChartArea: true,
-              borderWidth: 2,
-              color: "#888",
-              tickColor: "black",
-            },
-            ticks: {
-              color: "black",
-              callback(value) {
-                return value.toFixed(2);
-              },
-            },
-          },
-        },
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-      },
-      plugins: [
+  const config = {
+    data: {
+      datasets: [
         {
-          id: "background-colour",
-          beforeDraw: (chart) => {
-            const ctx = chart.ctx;
-            ctx.save();
-            ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, width, height);
-            ctx.restore();
-            //ctx.translate(0.5, 0.5);
-          },
-          afterDraw: (chart) => {
-            const ctx = chart.ctx;
-
-            var imageData = ctx.getImageData(0, 0, width, height);
-            dither(imageData, 4);
-            ctx.putImageData(imageData, 0, 0);
-          },
+          type: "line",
+          fill: "origin",
+          label: "Strømpris",
+          data: prices
+            .reduce(
+              (prices, price) => [
+                ...prices,
+                {
+                  ...price,
+                  startsAt: price.startsAt.replace("00:00.", "10:00."),
+                },
+                {
+                  ...price,
+                  startsAt: price.startsAt.replace("00:00.", "50:00."),
+                },
+              ],
+              []
+            )
+            .map((d) => ({
+              x: d.startsAt,
+              y: d.total,
+            })),
+          borderColor: "red",
+          backgroundColor: "pink",
+          borderWidth: 3,
+          tension: 0,
+          pointRadius: 0,
+          order: 3,
+        },
+        {
+          type: "bar",
+          label: "Forbruk",
+          data: consumption.map((d) => ({
+            x: offset(d.from),
+            y: d.consumption * d.energy,
+          })),
+          borderColor: "black",
+          backgroundColor: "grey",
+          borderWidth: 2,
+          order: 2,
+          stack: "consumption",
+        },
+        {
+          type: "bar",
+          label: "Forbruk",
+          data: consumption.map((d) => ({
+            x: offset(d.from),
+            y: d.consumption * d.tax,
+          })),
+          borderColor: "black",
+          backgroundColor: "grey",
+          borderWidth: 2,
+          order: 2,
+          stack: "consumption",
+        },
+        {
+          type: "daylight",
+          data: daylight.map((d) => ({
+            ...d,
+            x: offset(d.time, 0, 0),
+            y: 0,
+          })),
+          order: 4,
+        },
+        {
+          type: "weather",
+          data: weather.map((d) => ({
+            ...d,
+            x: offset(d.time, 0, 0),
+            y: weatherPrice,
+          })),
+          barPercentage: 1,
+          categoryPercentage: 1,
+          order: 3,
         },
       ],
     },
-    "raw"
-  );
+    options: {
+      layout: {
+        padding: {
+          left: 6,
+          top: 0,
+          right: 0,
+        },
+      },
+      scales: {
+        x: {
+          alignToPixels: true,
+          offset: false,
+          grid: {
+            offset: false,
+            borderColor: "black",
+            borderWidth: 2,
+            color: "#888",
+            tickColor: "black",
+          },
+          ticks: {
+            color: "black",
+          },
+          type: "time",
+          time: {
+            stepSize: 3,
+            displayFormats: {
+              hour: "HH",
+            },
+          },
+          adapters: {
+            date: {
+              locale: nb,
+            },
+          },
+        },
+        y: {
+          alignToPixels: true,
+          grid: {
+            borderColor: "black",
+            drawOnChartArea: true,
+            borderWidth: 2,
+            color: "#888",
+            tickColor: "black",
+          },
+          ticks: {
+            color: "black",
+            callback(value) {
+              return value.toFixed(2);
+            },
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+    },
+    plugins: [
+      {
+        id: "background-colour",
+        beforeDraw: (chart) => {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore();
+          //ctx.translate(0.5, 0.5);
+        },
+        afterDraw: (chart) => {
+          const ctx = chart.ctx;
+
+          var imageData = ctx.getImageData(0, 0, width, height);
+          dither(imageData, 4);
+          ctx.putImageData(imageData, 0, 0);
+        },
+      },
+    ],
+  };
+
+  const chart = new Chart(ctx, config);
+
+  const buffer = canvas.toBuffer("raw");
+
+  chart.destroy();
 
   return toPixels(buffer);
 }
