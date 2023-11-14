@@ -9,6 +9,7 @@
   <body>
     <canvas width="800" height="480"></canvas>
     <script type="module">
+      import { compress, decompress } from "./heatshrink.js";
       const response = await fetch("./data");
 
       const data = new Uint8Array(await response.arrayBuffer());
@@ -18,7 +19,7 @@
        */
       function rle(input) {
         let o = 0;
-        const output = new Int8Array(input.length + input.length / 128);
+        const output = [];
         let headerPos = 0;
         let status = null;
         let i = 0;
@@ -41,38 +42,55 @@
           }
         }
 
-        return output.subarray(0, o);
+        return output;
       }
 
       function rld(input, size) {
         const output = new Uint8Array(size);
         let o = 0;
         let i = 0;
+        const repeats = {};
+        const actuals = {};
         while (o < size) {
           if (input[i] < 0) {
+            repeats[1 - input[i]] ??= 0;
+            repeats[1 - input[i]]++;
             for (let repeat = 1 - input[i++]; repeat > 0; repeat--) {
               output[o++] = input[i];
             }
             i++;
           } else {
+            actuals[1 + input[i]] ??= 0;
+            actuals[1 + input[i]]++;
             for (let actual = 1 + input[i++]; actual > 0; actual--) {
               output[o++] = input[i++];
             }
           }
         }
+        console.log({ repeats, actuals });
+
         return output.subarray(0, o);
       }
 
-      const arr = [];
-      for (let i = 0; i < 256; i++) {
-        arr[i] = i;
-      }
-
-      test([0, 0, 0, 1, 1, 1]);
-      test(arr);
+      //test([0, 1, 1]);
+      test(Array.from(new Array(256), (_, i) => i));
       test(data);
-      test(data.subarray(0, data.length / 2));
-      test(data.subarray(data.length / 2));
+
+      const stream = new Blob([data])
+        .stream()
+        .pipeThrough(new CompressionStream("deflate"));
+      let count = 0;
+      for await (const chunk of stream) {
+        count += chunk.length;
+      }
+      console.log(
+        `deflate: from ${data.length} to ${count}, down to ${(
+          (count / data.length) *
+          100
+        ).toFixed(0)}%`
+      );
+      //test(data.subarray(0, data.length / 2));
+      //test(data.subarray(data.length / 2));
 
       function test(input) {
         const compressed = rle(input);
@@ -88,12 +106,21 @@
             );
         }
         console.log(
-          `compressed from ${input.length} to ${compressed.length}, down to ${(
+          `rle: from ${input.length} to ${compressed.length}, down to ${(
             (compressed.length / input.length) *
             100
           ).toFixed(0)}%`
         );
       }
+
+      const compressed = compress(data);
+
+      console.log(
+        `heatshrink: from ${data.length} to ${compressed.length}, down to ${(
+          (compressed.length / data.length) *
+          100
+        ).toFixed(0)}%`
+      );
 
       const canvas = document.querySelector("canvas");
       const ctx = canvas.getContext("2d");
