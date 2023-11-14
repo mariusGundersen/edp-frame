@@ -109,3 +109,13 @@ Still something isn't right, it doesn't always manage to connect. A reboot, by d
 ## 2022-08-21
 
 It's been running over summer and works pretty well. I had to replace the single lipo battery with three AA batteries for it to last longer than a few days. Now it lasts at least three weeks, mayb more.
+
+## 2023-11-14
+
+Trying do figure out why it's pulling so much power! I have a new pico and a new ESP8266 that I can test on using a multimeter.
+
+- The pico draws 16uA when in deep sleep (with the program `setDeepSleep(true);`), measured at the battery
+- When the esp01 module is connected to 3.3v source (on the pico) it draws 1069uA, measured on the 3.3v pin
+  - But if the EN pin (CH_PD) is flipped high and then low again it only draws 25uA!
+  - With a simple program I can get it to flip back and forth between a few mA and 25uA.
+- But I am not able to measure the battery draw reliably.

@@ -4,12 +4,14 @@
   "description": "",
   "main": "firmware.js",
   "scripts": {
-    "espruino": "espruino"
+    "espruino": "espruino",
+    "flash": "espruino ./test.js --config SAVE_ON_SEND=1 && espruino"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "espruino": "^0.1.42"
+    "@types/espruino": "^1.94.10",
+    "espruino": "^0.1.53"
   }
 }

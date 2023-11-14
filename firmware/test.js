@@ -1,3 +1,5 @@
+const edp = require("./edp.js");
+
 setDeepSleep(true);
 
 function wifi() {
@@ -15,7 +17,7 @@ function wifi() {
   gpio0.mode("input");
   rst.set();
 }
-
+/*
 function edp() {
   const busy = A5;
   const rst = A6;
@@ -30,7 +32,7 @@ function edp() {
   cs.reset();
   clk.mode("input");
   din.mode("input");
-}
+}*/
 
 wifi();
-edp();
+edp.init().then(edp.sleep);
