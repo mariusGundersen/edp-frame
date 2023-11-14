@@ -39,9 +39,21 @@ class Daylight extends BarController {
 
       ctx.save();
 
-      const color = Math.floor(light * 0xff).toString(16);
-
-      ctx.fillStyle = `#${color}${color}${color}`;
+      if (light === 0.5) {
+        const gradient = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+        gradient.addColorStop(0, "black");
+        gradient.addColorStop(1, "white");
+        ctx.fillStyle = gradient;
+      } else if (light === -0.5) {
+        const gradient = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+        gradient.addColorStop(0, "white");
+        gradient.addColorStop(1, "black");
+        ctx.fillStyle = gradient;
+      } else if (light === 1) {
+        ctx.fillStyle = '#ffffff';
+      } else {
+        ctx.fillStyle = '#000000';
+      }
 
       ctx.fillRect(x - w / 2, h / 2 - 6, w, h + 6);
 
@@ -278,7 +290,7 @@ export default async function drawChart() {
           : p.startsAt < sun.sunrise && prices[i + 1]?.startsAt >= sun.sunrise
             ? 0.5
             : p.startsAt < sun.sunset && prices[i + 1]?.startsAt > sun.sunset
-              ? 0.5
+              ? -0.5
               : 0
       )
       .reduce((a, b) => a + b, 0),
