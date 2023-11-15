@@ -18,14 +18,59 @@
        * @param {Uint8Array} input
        */
       function rle(input) {
-        let o = 0;
-        const output = [];
-        let headerPos = 0;
-        let status = null;
+        const getQuad = (i) =>
+          input[i] |
+          (input[i + 1] << 8) |
+          (input[i + 2] << 16) |
+          (input[i + 3] << 24);
+
+        const histogram = new Map();
+        for (let i = 0; i < input.length - 3; i++) {
+          if (input[i] === input[i + 1]) continue;
+          const quad = getQuad(i);
+          histogram.set(quad, (histogram.get(quad) ?? 0) + 1);
+        }
+
+        const entries = [...histogram.entries()]
+          .toSorted((a, b) => b[1] - a[1])
+          .slice(0, 64);
+
+        const expectedUsages = entries.map((a) => a[1]);
+        const usages = new Array(64).fill(0);
+
+        const quads = entries.map((a) => a[0]);
+
+        const output = [
+          ...quads.flatMap((q) => [
+            q & 0xff,
+            (q >> 8) & 0xff,
+            (q >> 16) & 0xff,
+            (q >> 24) & 0xff,
+          ]),
+        ];
+
+        for (let i = output.length; i < 256; i++) {
+          output[i] = 0;
+        }
+        let o = output.length;
         let i = 0;
+
         while (i < input.length) {
+          const quadIndex = quads.indexOf(getQuad(i));
+
+          if (quadIndex >= 0) {
+            output[o++] = 64 + quadIndex;
+            usages[quadIndex]++;
+            i += 4;
+            continue;
+          }
+
           let repeats = 1;
-          while (input[i] === input[i + repeats] && repeats < 128) {
+          while (
+            i + repeats < input.length &&
+            input[i] === input[i + repeats] &&
+            repeats < 128
+          ) {
             repeats++;
           }
           if (repeats > 1) {
@@ -35,12 +80,21 @@
           } else {
             const from = i + 1;
             const headerPos = o++;
-            while (input[i] !== input[i + 1] && i - from < 127) {
+            while (i < input.length && i - from < 63) {
+              if (input[i] === input[i + 1] && input[i] === input[i + 2]) break;
+              if (quads.includes(getQuad(i))) break;
               output[o++] = input[i++];
             }
             output[headerPos] = i - from;
           }
         }
+
+        console.log(
+          "diff usages",
+          expectedUsages.map((e, i) => e - usages[i]),
+          expectedUsages,
+          usages
+        );
 
         return output;
       }
@@ -48,7 +102,7 @@
       function rld(input, size) {
         const output = new Uint8Array(size);
         let o = 0;
-        let i = 0;
+        let i = 256;
         const repeats = {};
         const actuals = {};
         while (o < size) {
@@ -58,6 +112,13 @@
             for (let repeat = 1 - input[i++]; repeat > 0; repeat--) {
               output[o++] = input[i];
             }
+            i++;
+          } else if (input[i] >= 64) {
+            const index = input[i] - 64;
+            output[o++] = input[index * 4 + 0];
+            output[o++] = input[index * 4 + 1];
+            output[o++] = input[index * 4 + 2];
+            output[o++] = input[index * 4 + 3];
             i++;
           } else {
             actuals[1 + input[i]] ??= 0;
@@ -69,10 +130,10 @@
         }
         console.log({ repeats, actuals });
 
-        return output.subarray(0, o);
+        return output;
       }
 
-      //test([0, 1, 1]);
+      test([0, 1, 2, 3, 4, 5, 6, 7]);
       test(Array.from(new Array(256), (_, i) => i));
       test(data);
 
