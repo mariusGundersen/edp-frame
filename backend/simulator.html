@@ -18,53 +18,35 @@
        * @param {Uint8Array} input
        */
       function rle(input) {
-        const getQuad = (i) =>
-          input[i] |
-          (input[i + 1] << 8) |
-          (input[i + 2] << 16) |
-          (input[i + 3] << 24);
+        const getQuad = (arr, i) =>
+          arr[i + 3] |
+          (arr[i + 2] << 8) |
+          (arr[i + 1] << 16) |
+          (arr[i + 0] << 24);
 
-        const histogram = new Map();
-        for (let i = 0; i < input.length - 3; i++) {
-          if (input[i] === input[i + 1]) continue;
-          const quad = getQuad(i);
+        const bump = (histogram, quad) =>
           histogram.set(quad, (histogram.get(quad) ?? 0) + 1);
-        }
 
-        const entries = [...histogram.entries()]
-          .toSorted((a, b) => b[1] - a[1])
-          .slice(0, 64);
+        const getMostFrequent = (histogram, count = 64) =>
+          [...histogram.entries()]
+            .filter((a) => a[1] > 0)
+            .toSorted((a, b) => b[1] - a[1])
+            .slice(0, count);
 
-        const expectedUsages = entries.map((a) => a[1]);
-        const usages = new Array(64).fill(0);
-
-        const quads = entries.map((a) => a[0]);
-
-        const output = [
-          ...quads.flatMap((q) => [
-            q & 0xff,
-            (q >> 8) & 0xff,
-            (q >> 16) & 0xff,
-            (q >> 24) & 0xff,
-          ]),
+        const toFourBytes = (q) => [
+          (q >> 24) & 0xff,
+          (q >> 16) & 0xff,
+          (q >> 8) & 0xff,
+          (q >> 0) & 0xff,
         ];
 
-        for (let i = output.length; i < 256; i++) {
-          output[i] = 0;
-        }
-        let o = output.length;
+        const formatQuad = (q) => (q >>> 0).toString(16).padStart(8, "0");
+
+        const output = [];
+        let o = 0;
         let i = 0;
 
         while (i < input.length) {
-          const quadIndex = quads.indexOf(getQuad(i));
-
-          if (quadIndex >= 0) {
-            output[o++] = 64 + quadIndex;
-            usages[quadIndex]++;
-            i += 4;
-            continue;
-          }
-
           let repeats = 1;
           while (
             i + repeats < input.length &&
@@ -82,29 +64,89 @@
             const headerPos = o++;
             while (i < input.length && i - from < 63) {
               if (input[i] === input[i + 1] && input[i] === input[i + 2]) break;
-              if (quads.includes(getQuad(i))) break;
               output[o++] = input[i++];
             }
+
+            if (i === from) {
+              console.log(formatQuad(getQuad(input, i - 2)));
+            }
+
             output[headerPos] = i - from;
           }
         }
 
-        console.log(
-          "diff usages",
-          expectedUsages.map((e, i) => e - usages[i]),
-          expectedUsages,
-          usages
-        );
+        const histogram = new Map();
+        for (i = 0; i < output.length; ) {
+          if (output[i] < 0) {
+            i += 2;
+          } else {
+            const count = 1 + output[i++];
+            const end = i + count;
+            while (i + 3 < end) {
+              bump(histogram, getQuad(output, i));
+              i += 4;
+            }
+            i = end;
+          }
+        }
 
-        return output;
+        const mostFrequent = getMostFrequent(histogram);
+
+        const quads = mostFrequent.map((q) => q[0]);
+        const quadCount = quads.length;
+
+        for (i = 0; i < output.length; ) {
+          if (output[i] < 0) {
+            i += 2;
+          } else {
+            const count = 1 + output[i++];
+            if (count < 4) {
+              i += count;
+            } else {
+              const start = i;
+              let end = start + count;
+              while (i < end) {
+                const quadIndex = quads.indexOf(getQuad(output, i));
+                if (quadIndex === -1) {
+                  i = Math.min(i + 4, end);
+                } else {
+                  end -= 4;
+                  const isAtEnd = i === end;
+                  const isAtStart = i === start;
+                  if (isAtStart) {
+                    if (isAtEnd) {
+                      output.splice(i - 1, 5, 64 + quadIndex);
+                    } else {
+                      output.splice(i - 1, 5, 64 + quadIndex, end - i - 1);
+                    }
+                  } else {
+                    output[start - 1] = i - start - 1;
+                    if (isAtEnd) {
+                      output.splice(i, 4, 64 + quadIndex);
+                    } else {
+                      output.splice(i, 4, 64 + quadIndex, end - i - 1);
+                    }
+
+                    i++;
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        console.log(output);
+        return [quadCount, ...quads.flatMap(toFourBytes), ...output];
       }
 
       function rld(input, size) {
         const output = new Uint8Array(size);
         let o = 0;
-        let i = 256;
+        let i = input[0] * 4 + 1;
         const repeats = {};
         const actuals = {};
+        const quads = {};
         while (o < size) {
           if (input[i] < 0) {
             repeats[1 - input[i]] ??= 0;
@@ -115,10 +157,13 @@
             i++;
           } else if (input[i] >= 64) {
             const index = input[i] - 64;
-            output[o++] = input[index * 4 + 0];
             output[o++] = input[index * 4 + 1];
             output[o++] = input[index * 4 + 2];
             output[o++] = input[index * 4 + 3];
+            output[o++] = input[index * 4 + 4];
+
+            quads[index] ??= 0;
+            quads[index]++;
             i++;
           } else {
             actuals[1 + input[i]] ??= 0;
@@ -128,12 +173,28 @@
             }
           }
         }
-        console.log({ repeats, actuals });
+
+        console.log({ actuals, repeats, quads });
 
         return output;
       }
 
-      test([0, 1, 2, 3, 4, 5, 6, 7]);
+      test([0, 1, 1, 1, 1, 0, 0, 0]);
+      test([0, 1, 2, 3, 4, 5, 6, 7, 9, 9, 9, 0, 1, 2, 3, 4, 5, 6, 7]);
+      test([0, 1, 2, 3, 4, 5, 6, 7, 9, 9, 9, 8, 1, 2, 3, 4, 5, 6, 7]);
+      test([0, 1, 2, 3, 4, 5, 6, 7, 9, 9, 9, 0, 1, 2, 3, 8, 5, 6, 7]);
+      test(
+        [
+          [0, 1, 0, 1],
+          [0, 2, 0, 2],
+          [0, 3, 0, 3],
+          [9, 9, 9],
+          [0, 1, 2, 1],
+          [0, 2, 0, 2],
+          [1, 3, 1, 3],
+        ].flat()
+      );
+      test([0, 1, 2, 3, 5, 5, 5, 0, 1, 2, 3]);
       test(Array.from(new Array(256), (_, i) => i));
       test(data);
 
@@ -154,6 +215,7 @@
       //test(data.subarray(data.length / 2));
 
       function test(input) {
+        console.log("test", input);
         const compressed = rle(input);
         const output = rld(compressed, input.length);
         if (input.length !== output.length)
@@ -204,7 +266,7 @@
             : pixels[800 * 480 - i];
       }
 
-      ctx.putImageData(imgData, 0, 0);
+      //ctx.putImageData(imgData, 0, 0);
     </script>
   </body>
 </html>
