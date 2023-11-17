@@ -1,6 +1,6 @@
-const config = require("./firmware/config.js");
+const config = require("./config.js");
 const Storage = require("Storage");
-const edp = require("./firmware/edp.js");
+const edp = require("./edp.js");
 
 function fetch(req) {
   const options = url.parse(req);
@@ -43,7 +43,7 @@ function wait() {
 
 A10.set(); //make sure to set esp-01 RST high;
 Serial2.setup(115200, { rx: A3, tx: A2 });
-const wifi = require("./firmware/ESP8266WiFi.js").setup(Serial2);
+const wifi = require("./ESP8266WiFi.js").setup(Serial2);
 
 function log(message) {
   Storage.open("log", "a").write(`${new Date()}: ${message}\n`);

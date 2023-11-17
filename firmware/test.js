@@ -1,6 +1,7 @@
 const edp = require("./edp.js");
 
 setDeepSleep(true);
+setSleepIndicator(LED2);
 
 function wifi() {
   const gpio0 = A1;
@@ -16,6 +17,10 @@ function wifi() {
   gpio2.mode("input");
   gpio0.mode("input");
   rst.set();
+
+  /*setInterval(() => {
+    ch_pd.toggle();
+  }, 10000);*/
 }
 /*
 function edp() {
@@ -35,4 +40,7 @@ function edp() {
 }*/
 
 wifi();
-edp.init().then(edp.sleep);
+
+edp.init().then(() => {
+  setTimeout(() => edp.sleep(), 10_000);
+});

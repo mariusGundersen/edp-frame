@@ -77,7 +77,7 @@ var edp = {
   off: () => send(0x02),
   deepSleep: () => send(0x07, [0xa5]),
   init: asyncify(
-    //() => rst.set(),
+    () => rst.set(),
     //() => dc.reset(),
     () => cs.reset(),
     //() => busy.mode("input_pullup"),
@@ -103,8 +103,8 @@ var edp = {
     () => watch(busy),
     () => edp.deepSleep(),
     //() => cs.mode("input"),
-    //() => dc.mode("input"),
-    //() => busy.mode("input")
+    () => dc.reset(),
+    () => rst.reset()
   ),
 };
 
