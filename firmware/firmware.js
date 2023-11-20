@@ -1,6 +1,9 @@
 const config = require("./config.js");
 const Storage = require("Storage");
 const edp = require("./edp.js");
+const http = require("http");
+
+/*
 
 function fetch(req) {
   const options = url.parse(req);
@@ -15,6 +18,14 @@ function fetch(req) {
     const logFile = Storage.open("log", "r");
     E.pipe(logFile, req, { chunkSize: 256 });
   });
+}
+*/
+
+
+function fetch(url) {
+  return new Promise((res, rej) =>
+    http.get(url, res).on("error", rej)
+  );
 }
 
 Promise.prototype.finally = function (f) {
@@ -45,9 +56,7 @@ A10.set(); //make sure to set esp-01 RST high;
 Serial2.setup(115200, { rx: A3, tx: A2 });
 const wifi = require("./ESP8266WiFi.js").setup(Serial2);
 
-function log(message) {
-  Storage.open("log", "a").write(`${new Date()}: ${message}\n`);
-}
+const log = (message) => undefined;//Storage.open("log", "a").write(`${new Date()}: ${message}\n`);
 
 function retry(attempts, task) {
   return () => {
