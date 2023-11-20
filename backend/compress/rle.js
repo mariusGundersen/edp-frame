@@ -44,19 +44,13 @@ export function decompress(input, size) {
   const output = new Uint8Array(size);
   let o = 0;
   let i = 0;
-  const repeats = {};
-  const actuals = {};
   while (o < size) {
     if (input[i] < 0) {
-      repeats[1 - input[i]] ??= 0;
-      repeats[1 - input[i]]++;
       for (let repeat = 1 - input[i++]; repeat > 0; repeat--) {
         output[o++] = input[i];
       }
       i++;
     } else {
-      actuals[1 + input[i]] ??= 0;
-      actuals[1 + input[i]]++;
       for (let actual = 1 + input[i++]; actual > 0; actual--) {
         output[o++] = input[i++];
       }
@@ -65,3 +59,39 @@ export function decompress(input, size) {
 
   return output;
 }
+
+export function streamDecompress(size, callback) {
+  const chunk = new Uint8Array(256);
+
+  let c = 0;
+  let o = 0;
+  let repeat = 0;
+  let actual = 0;
+
+  return input => {
+    for (let i = 0; i < input.length;) {
+      if (o + c >= size) {
+        return;
+      } else if (repeat > 0) {
+        chunk[c++] = input[i];
+        repeat--;
+        if (repeat === 0) i++;
+      } else if (actual > 0) {
+        chunk[c++] = input[i++];
+        actual--;
+      } else if (input[i] < 0) {
+        repeat = 1 - input[i++];
+      } else {
+        actual = 1 + input[i++];
+      }
+
+      if (c === 256) {
+        callback(chunk);
+        c = 0;
+        o += 256;
+      }
+    }
+  }
+}
+
+

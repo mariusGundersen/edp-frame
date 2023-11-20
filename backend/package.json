@@ -5,7 +5,8 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
-    "test": "node --test --watch compress/test.js",
+    "test": "node --test compress/test.js",
+    "test:watch": "node --test --watch compress/test.js",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

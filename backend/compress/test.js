@@ -11,6 +11,24 @@ import * as singles from './singles.js';
 const input = new Uint8Array(await readFile('./compress/data.bin'));
 
 check("rle", rle, input);
+check("rle stream", {
+  ...rle, decompress(data, size) {
+    const output = new Uint8Array(size);
+    let c = 0;
+    const call = rle.streamDecompress(size, chunk => {
+      output.set(chunk, c);
+      c += 256;
+    });
+
+    for (let i = 0; i < data.length;) {
+      const l = Math.floor(Math.random() * 50) * 150;
+      call(data.slice(i, i + l));
+      i += l;
+    }
+
+    return output;
+  }
+}, input);
 check("quad", quad, input);
 check("quadOld", quadOld, input);
 check("singles", singles, input);
