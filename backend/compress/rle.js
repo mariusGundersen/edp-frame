@@ -1,7 +1,7 @@
 //@ts-check
 
 /**
- * @param {number[]} input
+ * @param {number[] | Uint8Array} input
  */
 export function compress(input) {
   const output = [];
@@ -61,7 +61,8 @@ export function decompress(input, size) {
 }
 
 export function streamDecompress(size, callback) {
-  const chunk = new Uint8Array(256);
+  const CHUNK_LENGTH = 256;
+  const chunk = new Uint8Array(CHUNK_LENGTH);
 
   let c = 0;
   let o = 0;
@@ -85,10 +86,10 @@ export function streamDecompress(size, callback) {
         actual = 1 + input[i++];
       }
 
-      if (c === 256) {
+      if (c === CHUNK_LENGTH) {
         callback(chunk);
         c = 0;
-        o += 256;
+        o += CHUNK_LENGTH;
       }
     }
   }

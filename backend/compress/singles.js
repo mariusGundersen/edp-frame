@@ -5,6 +5,7 @@ import { bump, getMostFrequent } from "./utils.js";
 
 /**
  * @param {number[]} input
+ * @returns {number[]}
  */
 export function compress(input) {
   const output = [];
@@ -50,12 +51,13 @@ export function compress(input) {
     a[0].toString()
   );
   for (o = 0; o < output.length; o++) {
-    if (typeof output[o] === "string") {
-      const index = mostFrequentSingles.indexOf(output[o]);
+    const byte = output[o];
+    if (typeof byte === "string") {
+      const index = mostFrequentSingles.indexOf(byte);
       if (index >= 0) {
         output[o] = 64 + index;
       } else {
-        output.splice(o, 1, 0, parseInt(output[o]));
+        output.splice(o, 1, 0, parseInt(byte));
       }
     }
   }

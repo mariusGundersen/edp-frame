@@ -11,24 +11,7 @@ import * as singles from './singles.js';
 const input = new Uint8Array(await readFile('./compress/data.bin'));
 
 check("rle", rle, input);
-check("rle stream", {
-  ...rle, decompress(data, size) {
-    const output = new Uint8Array(size);
-    let c = 0;
-    const call = rle.streamDecompress(size, chunk => {
-      output.set(chunk, c);
-      c += 256;
-    });
-
-    for (let i = 0; i < data.length;) {
-      const l = Math.floor(Math.random() * 50) * 150;
-      call(data.slice(i, i + l));
-      i += l;
-    }
-
-    return output;
-  }
-}, input);
+checkStream("rle stream", rle, input);
 check("quad", quad, input);
 check("quadOld", quadOld, input);
 check("singles", singles, input);
@@ -44,6 +27,44 @@ test('lz77 basic', () => {
   assert.deepStrictEqual(lz77.compress([1, 2, 3, 1, 4, 5]), [2, 0, 1, 2, 3, 2, 1, 4, 0, 0, 5]);
 });
 
+
+/**
+ * @param {string} name
+ * @param {{
+*   compress(input: number[] | Uint8Array): number[],
+*   streamDecompress(size: number, callback: (output: Uint8Array) => void): (chunk: number[] | Uint8Array) => void;
+* }} algorithm
+* @param {number[] | Uint8Array} input
+*/
+function checkStream(name, { compress, streamDecompress }, input) {
+  check(name, {
+    compress, decompress(data, size) {
+      const output = new Uint8Array(size);
+      let c = 0;
+      const call = streamDecompress(size, chunk => {
+        output.set(chunk, c);
+        c += chunk.length;
+      });
+
+      for (let i = 0; i < data.length;) {
+        const l = Math.floor(Math.random() * 50) * 150;
+        call(data.slice(i, i + l));
+        i += l;
+      }
+
+      return output;
+    }
+  }, input);
+}
+
+/**
+ * @param {string} name
+ * @param {{
+ *   compress(input: number[] | Uint8Array): number[],
+ *   decompress(input: number[] | Uint8Array, size: number): Uint8Array
+ * }} algorithm
+ * @param {number[] | Uint8Array} input
+ */
 function check(name, { compress, decompress }, input) {
   test(name, () => {
     const compressed = compress(input);

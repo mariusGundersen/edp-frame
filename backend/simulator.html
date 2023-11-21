@@ -9,136 +9,9 @@
   <body>
     <canvas width="800" height="480"></canvas>
     <script type="module">
-      import { compress, decompress } from "./heatshrink.js";
       const response = await fetch("./data");
 
       const data = new Uint8Array(await response.arrayBuffer());
-
-      /**
-       * @param {Uint8Array} input
-       */
-      function rle(input) {
-        const getQuad = (arr, i) =>
-          arr[i + 3] |
-          (arr[i + 2] << 8) |
-          (arr[i + 1] << 16) |
-          (arr[i + 0] << 24);
-
-        const bump = (histogram, quad) =>
-          histogram.set(quad, (histogram.get(quad) ?? 0) + 1);
-
-        const getMostFrequent = (histogram, count = 64) =>
-          [...histogram.entries()]
-            .filter((a) => a[1] > 0)
-            .toSorted((a, b) => b[1] - a[1])
-            .slice(0, count);
-
-        const toFourBytes = (q) => [
-          (q >> 24) & 0xff,
-          (q >> 16) & 0xff,
-          (q >> 8) & 0xff,
-          (q >> 0) & 0xff,
-        ];
-
-        const formatQuad = (q) => (q >>> 0).toString(16).padStart(8, "0");
-
-        const output = [];
-        let o = 0;
-        let i = 0;
-
-        while (i < input.length) {
-          let repeats = 1;
-          while (
-            i + repeats < input.length &&
-            input[i] === input[i + repeats] &&
-            repeats < 128
-          ) {
-            repeats++;
-          }
-          if (repeats > 1) {
-            output[o++] = 1 - repeats;
-            output[o++] = input[i];
-            i += repeats;
-          } else {
-            const from = i + 1;
-            const headerPos = o++;
-            while (i < input.length && i - from < 63) {
-              if (input[i] === input[i + 1] && input[i] === input[i + 2]) break;
-              output[o++] = input[i++];
-            }
-
-            if (i === from) {
-              console.log(formatQuad(getQuad(input, i - 2)));
-            }
-
-            output[headerPos] = i - from;
-          }
-        }
-
-        const histogram = new Map();
-        for (i = 0; i < output.length; ) {
-          if (output[i] < 0) {
-            i += 2;
-          } else {
-            const count = 1 + output[i++];
-            const end = i + count;
-            while (i + 3 < end) {
-              bump(histogram, getQuad(output, i));
-              i += 4;
-            }
-            i = end;
-          }
-        }
-
-        const mostFrequent = getMostFrequent(histogram);
-
-        const quads = mostFrequent.map((q) => q[0]);
-        const quadCount = quads.length;
-
-        for (i = 0; i < output.length; ) {
-          if (output[i] < 0) {
-            i += 2;
-          } else {
-            const count = 1 + output[i++];
-            if (count < 4) {
-              i += count;
-            } else {
-              const start = i;
-              let end = start + count;
-              while (i < end) {
-                const quadIndex = quads.indexOf(getQuad(output, i));
-                if (quadIndex === -1) {
-                  i = Math.min(i + 4, end);
-                } else {
-                  end -= 4;
-                  const isAtEnd = i === end;
-                  const isAtStart = i === start;
-                  if (isAtStart) {
-                    if (isAtEnd) {
-                      output.splice(i - 1, 5, 64 + quadIndex);
-                    } else {
-                      output.splice(i - 1, 5, 64 + quadIndex, end - i - 1);
-                    }
-                  } else {
-                    output[start - 1] = i - start - 1;
-                    if (isAtEnd) {
-                      output.splice(i, 4, 64 + quadIndex);
-                    } else {
-                      output.splice(i, 4, 64 + quadIndex, end - i - 1);
-                    }
-
-                    i++;
-                  }
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        console.log(output);
-        return [quadCount, ...quads.flatMap(toFourBytes), ...output];
-      }
 
       function rld(input, size) {
         const output = new Uint8Array(size);
@@ -179,72 +52,6 @@
         return output;
       }
 
-      test([0, 1, 1, 1, 1, 0, 0, 0]);
-      test([0, 1, 2, 3, 4, 5, 6, 7, 9, 9, 9, 0, 1, 2, 3, 4, 5, 6, 7]);
-      test([0, 1, 2, 3, 4, 5, 6, 7, 9, 9, 9, 8, 1, 2, 3, 4, 5, 6, 7]);
-      test([0, 1, 2, 3, 4, 5, 6, 7, 9, 9, 9, 0, 1, 2, 3, 8, 5, 6, 7]);
-      test(
-        [
-          [0, 1, 0, 1],
-          [0, 2, 0, 2],
-          [0, 3, 0, 3],
-          [9, 9, 9],
-          [0, 1, 2, 1],
-          [0, 2, 0, 2],
-          [1, 3, 1, 3],
-        ].flat()
-      );
-      test([0, 1, 2, 3, 5, 5, 5, 0, 1, 2, 3]);
-      test(Array.from(new Array(256), (_, i) => i));
-      test(data);
-
-      const stream = new Blob([data])
-        .stream()
-        .pipeThrough(new CompressionStream("deflate"));
-      let count = 0;
-      for await (const chunk of stream) {
-        count += chunk.length;
-      }
-      console.log(
-        `deflate: from ${data.length} to ${count}, down to ${(
-          (count / data.length) *
-          100
-        ).toFixed(0)}%`
-      );
-      //test(data.subarray(0, data.length / 2));
-      //test(data.subarray(data.length / 2));
-
-      function test(input) {
-        console.log("test", input);
-        const compressed = rle(input);
-        const output = rld(compressed, input.length);
-        if (input.length !== output.length)
-          throw new Error(
-            `Lengths don't match! ${input.length} !== ${output.length}`
-          );
-        for (let i = 0; i < input.length; i++) {
-          if (input[i] !== output[i])
-            throw new Error(
-              `Mismatched at index ${i}, ${input[i]} !== ${output[i]}`
-            );
-        }
-        console.log(
-          `rle: from ${input.length} to ${compressed.length}, down to ${(
-            (compressed.length / input.length) *
-            100
-          ).toFixed(0)}%`
-        );
-      }
-
-      const compressed = compress(data);
-
-      console.log(
-        `heatshrink: from ${data.length} to ${compressed.length}, down to ${(
-          (compressed.length / data.length) *
-          100
-        ).toFixed(0)}%`
-      );
-
       const canvas = document.querySelector("canvas");
       const ctx = canvas.getContext("2d");
       const imgData = ctx.getImageData(0, 0, 800, 480);
@@ -266,7 +73,7 @@
             : pixels[800 * 480 - i];
       }
 
-      //ctx.putImageData(imgData, 0, 0);
+      ctx.putImageData(imgData, 0, 0);
     </script>
   </body>
 </html>
