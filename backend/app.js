@@ -1,7 +1,8 @@
 import bodyParser from "body-parser";
 import express from "express";
 import { PNG } from "pngjs";
-import * as rle from './compress/quadOld.js';
+import * as quad from './compress/quadOld.js';
+import * as rle from './compress/rle.js';
 import drawChart from "./electricity.js";
 
 const app = express()
@@ -16,8 +17,11 @@ const app = express()
   .get("/data", async (req, res) => {
     res.end(Buffer.from(await drawChart()), "binary");
   })
-  .get("/data-compressed", async (req, res) => {
+  .get("/data/rle", async (req, res) => {
     res.end(Buffer.from(rle.compress(await drawChart())), "binary");
+  })
+  .get("/data/quad", async (req, res) => {
+    res.end(Buffer.from(quad.compress(await drawChart())), "binary");
   })
   .post("/data", async (req, res) => {
     console.log("posted to data");
