@@ -1,3 +1,6 @@
+B9.reset();
+A10.reset();
+
 const config = require("./config.js");
 const Storage = require("Storage");
 const edp = require("./edp.js");
@@ -52,6 +55,7 @@ function wait() {
   return delay(secs * 1000 + mins * 60 * 1000);
 }
 
+B9.set(); //make sure to set esp-01 EN high;
 A10.set(); //make sure to set esp-01 RST high;
 Serial2.setup(115200, { rx: A3, tx: A2 });
 const wifi = require("./ESP8266WiFi.js").setup(Serial2);
