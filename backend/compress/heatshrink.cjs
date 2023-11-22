@@ -75,7 +75,12 @@ function heatshrink_decompress(inputBuffer) {
       return outputBuffer;
 }
 
-export {
+/*export {
   heatshrink_compress as compress,
   heatshrink_decompress as decompress,
-};
+};*/
+
+module.exports = {
+      compress: heatshrink_compress,
+      decompress: heatshrink_decompress
+}

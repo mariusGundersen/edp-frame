@@ -23,7 +23,7 @@ function watch(pin) {
   return new Promise((res, rej) => {
     if (pin.read()) return res();
     setWatch(res, pin, { repeat: false, edge: "rising" });
-    setTimeout(rej, 60_000, `timeout: watched pin ${pin} never changed`)
+    setTimeout(rej, 60000, `timeout: watched pin ${pin} never changed`)
   });
 }
 

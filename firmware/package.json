@@ -5,7 +5,7 @@
   "main": "firmware.js",
   "scripts": {
     "espruino": "espruino",
-    "flash": "espruino ./firmware.js --config SAVE_ON_SEND=1 && espruino"
+    "flash": "espruino ./firmware.js -m --config SAVE_ON_SEND=1 --storage image:image.bin && espruino"
   },
   "keywords": [],
   "author": "",

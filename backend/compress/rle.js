@@ -61,7 +61,7 @@ export function decompress(input, size) {
 }
 
 export function streamDecompress(size, callback) {
-  const CHUNK_LENGTH = 256;
+  const CHUNK_LENGTH = 480;
   const chunk = new Uint8Array(CHUNK_LENGTH);
 
   let c = 0;
@@ -74,12 +74,26 @@ export function streamDecompress(size, callback) {
       if (o + c >= size) {
         return;
       } else if (repeat > 0) {
-        chunk[c++] = input[i];
-        repeat--;
-        if (repeat === 0) i++;
+        const remaining = CHUNK_LENGTH - c;
+        if (repeat <= remaining) {
+          chunk.fill(input[i], c, c + repeat);
+          c += repeat;
+          repeat = 0;
+          i++;
+        } else {
+          chunk.fill(input[i], c, c + remaining);
+          c += remaining
+          repeat -= remaining;
+        }
       } else if (actual > 0) {
-        chunk[c++] = input[i++];
-        actual--;
+        const remaining = CHUNK_LENGTH - c;
+        const available = input.length - i;
+
+        const len = Math.min(remaining, available, actual);
+        chunk.set(input.slice(i, i + len), c);
+        c += len;
+        i += len;
+        actual -= len;
       } else if (input[i] < 0) {
         repeat = 1 - input[i++];
       } else {

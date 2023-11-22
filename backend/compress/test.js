@@ -2,6 +2,7 @@
 import { readFile } from 'fs/promises';
 import assert from 'node:assert';
 import test from 'node:test';
+import * as heatshrink from './heatshrink.cjs';
 import * as lz77 from './lz77.js';
 import * as quad from './quad.js';
 import * as quadOld from './quadOld.js';
@@ -14,9 +15,11 @@ check("rle", rle, input);
 checkStream("rle stream", rle, input);
 check("quad", quad, input);
 check("quadOld", quadOld, input);
+checkStream("quadOld stream", quadOld, input);
 check("singles", singles, input);
 check("lz77", lz77, input);
 check("lzz+rle", lz77, new Uint8Array(rle.compress(input)));
+check("heatshrink", heatshrink, input);
 
 test('lz77 basic', () => {
   assert.deepStrictEqual(lz77.compress([1]), [0, 0, 1]);
@@ -31,10 +34,10 @@ test('lz77 basic', () => {
 /**
  * @param {string} name
  * @param {{
-*   compress(input: number[] | Uint8Array): number[],
-*   streamDecompress(size: number, callback: (output: Uint8Array) => void): (chunk: number[] | Uint8Array) => void;
+*   compress(input: number[] | Uint8Array): Uint8Array,
+*   streamDecompress(size: number, callback: (output: Uint8Array) => void): (chunk: Uint8Array) => void;
 * }} algorithm
-* @param {number[] | Uint8Array} input
+* @param {Uint8Array} input
 */
 function checkStream(name, { compress, streamDecompress }, input) {
   check(name, {
@@ -47,7 +50,7 @@ function checkStream(name, { compress, streamDecompress }, input) {
       });
 
       for (let i = 0; i < data.length;) {
-        const l = Math.floor(Math.random() * 50) * 150;
+        const l = Math.min(data.length, Math.floor(Math.random() * 50) + 150);
         call(data.slice(i, i + l));
         i += l;
       }
@@ -60,10 +63,10 @@ function checkStream(name, { compress, streamDecompress }, input) {
 /**
  * @param {string} name
  * @param {{
- *   compress(input: number[] | Uint8Array): number[],
- *   decompress(input: number[] | Uint8Array, size: number): Uint8Array
+ *   compress(input: number[] | Uint8Array): Uint8Array,
+ *   decompress(input: Uint8Array, size: number): Uint8Array
  * }} algorithm
- * @param {number[] | Uint8Array} input
+ * @param {Uint8Array} input
  */
 function check(name, { compress, decompress }, input) {
   test(name, () => {

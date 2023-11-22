@@ -4,6 +4,7 @@ import { bump, getMostFrequent, getQuad, toFourBytes } from "./utils.js";
 
 /**
  * @param {Uint8Array} input
+ * @returns {Uint8Array}
  */
 export function compress(input) {
   const histogram = new Map();
@@ -69,42 +70,81 @@ export function compress(input) {
     }
   }
 
-  return output;
+  return new Uint8Array(output);
 }
 
 /**
- * @param {number[]} input
+ * @param {Uint8Array} input
  * @param {number} size
  */
 export function decompress(input, size) {
   const output = new Uint8Array(size);
   let o = 0;
   let i = 256;
-  const repeats = {};
-  const actuals = {};
   while (o < size) {
     if (input[i] < 0) {
-      repeats[1 - input[i]] ??= 0;
-      repeats[1 - input[i]]++;
-      for (let repeat = 1 - input[i++]; repeat > 0; repeat--) {
-        output[o++] = input[i];
-      }
+      const repeats = 1 - input[i++];
+      output.fill(input[i], o, o + repeats);
+      o += repeats;
       i++;
     } else if (input[i] >= 64) {
       const index = input[i] - 64;
-      output[o++] = input[index * 4 + 0];
-      output[o++] = input[index * 4 + 1];
-      output[o++] = input[index * 4 + 2];
-      output[o++] = input[index * 4 + 3];
+      output.set(input.slice(index * 4, index * 4 + 4), o);
+      o += 4;
       i++;
     } else {
-      actuals[1 + input[i]] ??= 0;
-      actuals[1 + input[i]]++;
-      for (let actual = 1 + input[i++]; actual > 0; actual--) {
-        output[o++] = input[i++];
-      }
+      const actuals = 1 + input[i++];
+      output.set(input.slice(i, i + actuals), o);
+      i += actuals;
+      o += actuals;
     }
   }
 
   return output;
+}
+
+export function streamDecompress(size, callback) {
+  const CHUNK_LENGTH = 480;
+  const lookup = new Uint8Array(256);
+  const chunk = new Uint8Array(CHUNK_LENGTH);
+
+  let l = 0;
+  let c = 0;
+  let o = 0;
+  let repeat = 0;
+  let actual = 0;
+  let quad = 0;
+
+  return input => {
+    for (let i = 0; i < input.length;) {
+      if (l < 256) {
+        lookup[l++] = input[i++];
+      } else if (o + c >= size) {
+        return;
+      } else if (repeat > 0) {
+        chunk[c++] = input[i];
+        repeat--;
+        if (repeat === 0) i++;
+      } else if (actual > 0) {
+        chunk[c++] = input[i++];
+        actual--;
+      } else if (quad > 0) {
+        chunk[c++] = lookup[(input[i] - 64) * 4 + 4 - quad];
+        quad--;
+        if (quad === 0) i++;
+      } else if (input[i] < 0) {
+        repeat = 1 - input[i++];
+      } else if (input[i] >= 64) {
+        quad = 4;
+      } else {
+        actual = 1 + input[i++];
+      }
+
+      if (c === CHUNK_LENGTH) {
+        callback(chunk);
+        c = 0;
+        o += CHUNK_LENGTH;
+      }
+    }
+  }
 }

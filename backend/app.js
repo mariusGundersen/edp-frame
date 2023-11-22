@@ -1,6 +1,7 @@
 import bodyParser from "body-parser";
 import express from "express";
 import { PNG } from "pngjs";
+import * as heatshrink from './compress/heatshrink.cjs';
 import * as quad from './compress/quadOld.js';
 import * as rle from './compress/rle.js';
 import drawChart from "./electricity.js";
@@ -22,6 +23,9 @@ const app = express()
   })
   .get("/data/quad", async (req, res) => {
     res.end(Buffer.from(quad.compress(await drawChart())), "binary");
+  })
+  .get("/data/heatshrink", async (req, res) => {
+    res.end(Buffer.from(heatshrink.compress(await drawChart())), "binary");
   })
   .post("/data", async (req, res) => {
     console.log("posted to data");

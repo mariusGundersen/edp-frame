@@ -9,45 +9,35 @@
   <body>
     <canvas width="800" height="480"></canvas>
     <script type="module">
-      const response = await fetch("./data");
+      const response = await fetch("./data/quad");
 
-      const data = new Uint8Array(await response.arrayBuffer());
+      const data = decompress(
+        new Int8Array(await response.arrayBuffer()),
+        96_000
+      );
 
-      function rld(input, size) {
+      function decompress(input, size) {
         const output = new Uint8Array(size);
         let o = 0;
-        let i = input[0] * 4 + 1;
-        const repeats = {};
-        const actuals = {};
-        const quads = {};
+        let i = 256;
         while (o < size) {
           if (input[i] < 0) {
-            repeats[1 - input[i]] ??= 0;
-            repeats[1 - input[i]]++;
-            for (let repeat = 1 - input[i++]; repeat > 0; repeat--) {
-              output[o++] = input[i];
-            }
+            const repeats = 1 - input[i++];
+            output.fill(input[i], o, o + repeats);
+            o += repeats;
             i++;
           } else if (input[i] >= 64) {
             const index = input[i] - 64;
-            output[o++] = input[index * 4 + 1];
-            output[o++] = input[index * 4 + 2];
-            output[o++] = input[index * 4 + 3];
-            output[o++] = input[index * 4 + 4];
-
-            quads[index] ??= 0;
-            quads[index]++;
+            output.set(input.slice(index * 4, index * 4 + 4), o);
+            o += 4;
             i++;
           } else {
-            actuals[1 + input[i]] ??= 0;
-            actuals[1 + input[i]]++;
-            for (let actual = 1 + input[i++]; actual > 0; actual--) {
-              output[o++] = input[i++];
-            }
+            const actuals = 1 + input[i++];
+            output.set(input.slice(i, i + actuals), o);
+            i += actuals;
+            o += actuals;
           }
         }
-
-        console.log({ actuals, repeats, quads });
 
         return output;
       }

@@ -48,3 +48,10 @@ export function toFourBytes(q) {
 export function formatQuad(q) {
   return (q >>> 0).toString(16).padStart(8, "0");
 }
+
+/**
+ * @param {number} q
+ */
+export function formatByte(q) {
+  return (q >>> 0).toString(16).padStart(2, "0");
+}
