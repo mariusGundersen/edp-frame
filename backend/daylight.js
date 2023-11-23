@@ -15,6 +15,6 @@ async function getSunAndMoon(date, offset) {
   return {
     sunrise: sun.properties.sunrise.time,
     sunset: sun.properties.sunset.time,
-    moonphase: 100 - moon.properties.moonphase / 360 * 100
+    moonphase: moon.properties.moonphase / 360 * 100
   }
 }
