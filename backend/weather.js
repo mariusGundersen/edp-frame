@@ -259,6 +259,12 @@ const icons = {
   snowshowersandthunder_polartwilight: '\ue852', /* '' */
 }
 
+/**
+ *
+ * @param {string} from
+ * @param {string} to
+ * @returns {{icon: string, tile: [number, number], temperature: number, time: string}[]}
+ */
 export default async function getWeather(from, to) {
   const json = await fetchJson(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=59.917&lon=10.817`);
 
@@ -267,9 +273,10 @@ export default async function getWeather(from, to) {
   return json.properties.timeseries
     //.filter(t => new Date(t.time).getHours() % 6 == 0)
     .filter(t => Date.parse(t.time) >= Date.parse(from) && Date.parse(t.time) < Date.parse(to))
-    .filter(t => t.data.next_1_hours?.summary.symbol_code)
+    //.filter(t => t.data.next_1_hours?.summary.symbol_code)
     .map(t => ({
-      icon: iconsb[map[t.data.next_6_hours?.summary.symbol_code]],
+      symbol_code: t.data,
+      icon: iconsb[map[(t.data.next_12_hours ?? t.data.next_6_hours ?? t.data.next_1_hours)?.summary.symbol_code]],
       tile: getTile(t.data),
       temperature: t.data.instant.details.air_temperature,
       time: t.time
@@ -313,8 +320,8 @@ function getTiledTile(tile, pre, next) {
 
 function getTile(data) {
   const cloudy = data.instant.details.cloud_area_fraction;
-  const rain = data.next_1_hours.details.probability_of_precipitation;
-  const thunder = data.next_1_hours.details.probability_of_thunder;
+  const rain = data.next_1_hours?.details.probability_of_precipitation;
+  const thunder = data.next_1_hours?.details.probability_of_thunder;
 
   if (thunder > 20) {
     return 'thunder';

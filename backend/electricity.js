@@ -14,6 +14,12 @@ const height = 480;
 
 const image = await loadImage("./icons/weathertiles.png");
 
+registerFont("./OpenSans-ExtraBold.ttf", {
+  family: "OpenSans",
+});
+registerFont("./icons/yr-icons.ttf", {
+  family: "yr",
+});
 
 const canvas = createCanvas(width, height);
 const ctx = canvas.getContext('2d');
@@ -179,12 +185,6 @@ class Weather extends BarController {
 
 Chart.register(Weather);
 Chart.register(Daylight);
-registerFont("./OpenSans-ExtraBold.ttf", {
-  family: "OpenSans",
-});
-registerFont("./icons/yr-icons.ttf", {
-  family: "yr",
-});
 
 async function getElectricity() {
   const token =
@@ -467,7 +467,7 @@ export default async function drawChart() {
 
   chart.destroy();
 
-  return toPixels(buffer);
+  return buffer;
 }
 
 function offset(d, minutes = 30, hours = 0) {
@@ -477,20 +477,3 @@ function offset(d, minutes = 30, hours = 0) {
   return d.toISOString();
 }
 
-function toPixels(data, map = (x, y) => 480 * 800 - y * 800 - x) {
-  const buffer = new Uint8Array(((800 * 480) / 8) * 2);
-  var pixels = new Uint32Array(data.buffer);
-  for (let y = 0; y < 480; y++) {
-    for (let x = 0; x < 800; x++) {
-      const i = map(x, y);
-      const j = y * 800 + x;
-      const bgr = pixels[i] & 0xffffff;
-      if (bgr === 0xff0000) {
-        buffer[48000 + Math.floor(j / 8)] |= 1 << (7 - (j % 8));
-      } else if (bgr === 0xffffff) {
-        buffer[Math.floor(j / 8)] |= 1 << (7 - (j % 8));
-      }
-    }
-  }
-  return buffer;
-}
