@@ -263,7 +263,7 @@ const icons = {
  *
  * @param {string} from
  * @param {string} to
- * @returns {{icon: string, tile: [number, number], temperature: number, time: string}[]}
+ * @returns {Promise<{icon: string, tile: [number, number], temperature: number, time: string}[]>}
  */
 export default async function getWeather(from, to) {
   const json = await fetchJson(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=59.917&lon=10.817`);

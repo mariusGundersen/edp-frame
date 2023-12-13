@@ -5,6 +5,7 @@ import { nb } from "date-fns/locale/index.js";
 import dither from "./bayerDither.js";
 import getDaylight from "./daylight.js";
 import { fetchJson } from "./fetchJson.js";
+import { getConfig } from "./getConfig.js";
 import getWeather from "./weather.js";
 
 process.env.TZ = "Europe/Amsterdam";
@@ -187,9 +188,7 @@ Chart.register(Weather);
 Chart.register(Daylight);
 
 async function getElectricity() {
-  const token =
-    process.env.TIBBER_TOKEN ??
-    (await import("./config.js").then((c) => c.default.token));
+  const { tibber: { token } } = await getConfig();
 
   return await fetchJson("https://api.tibber.com/v1-beta/gql",
     {

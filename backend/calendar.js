@@ -1,8 +1,9 @@
 //@ts-check
 
 import { Temporal } from "@js-temporal/polyfill";
+import { google } from "googleapis";
 import { drawInCanvas } from "./canvas.js";
-import getCalendarEvents from "./google.js";
+import { getConfig } from "./getConfig.js";
 import getWeather from "./weather.js";
 
 const DAYS = [
@@ -35,7 +36,7 @@ export default async function drawCalendar() {
   const hourHeight = 20;
 
   const today = Temporal.Now.plainDate(Temporal.Calendar.from('iso8601'), Temporal.TimeZone.from('CET'));
-  const weather = await getWeather(today.toString(), today.add({ days: 3 }).toString()).then(w => w.map(w => ({
+  const weather = await getWeather(today.toString(), today.add({ days: 3 }).toString()).then(w => w.map((w) => ({
     ...w,
     dateTime: Temporal.Instant.from(w.time).toZonedDateTime({ calendar: 'iso8601', timeZone: 'CET' }).toPlainDateTime()
   })));
@@ -69,11 +70,15 @@ export default async function drawCalendar() {
     ctx.textBaseline = 'middle';
     for (let i = 7; i < 24; i++) {
       ctx.moveTo(marginLeft, i * hourHeight);
+      ctx.lineTo(800, i * hourHeight);
+      /*
+      ctx.moveTo(marginLeft + 5, i * hourHeight);
       ctx.lineTo(marginLeft + dayWidth - 5, i * hourHeight);
       ctx.moveTo(marginLeft + dayWidth + 5, i * hourHeight);
       ctx.lineTo(marginLeft + dayWidth * 2 - 5, i * hourHeight);
       ctx.moveTo(marginLeft + dayWidth * 2 + 5, i * hourHeight);
       ctx.lineTo(marginLeft + dayWidth * 3 - 5, i * hourHeight);
+      */
       ctx.fillText(`${i < 10 ? '0' + i : i}:00`, marginLeft / 2, i * hourHeight);
     }
     ctx.stroke();
@@ -126,13 +131,44 @@ export default async function drawCalendar() {
         ctx.fillStyle = '#000';
         // measure text
         ctx.fillText(summary, left + 10, yOffset * hourHeight + 10, dayWidth - 10);
-
-
       }
     }
   });
 }
 
-function drawEvent(ctx, event) {
+/**
+ * @param {string} timeMin
+ * @param {string} timeMax
+ */
+async function getCalendarEvents(timeMin, timeMax) {
+  const config = await getConfig();
+  const calendar = google.calendar({ version: 'v3', auth: config.google });
+  return await Promise.all([
+    getEvents(calendar, 'gundersen@gmail.com', timeMin, timeMax),
+    getEvents(calendar, 'annaemelieakesson@gmail.com', timeMin, timeMax),
+  ]).then(p => p.flat());
+}
 
+
+/**
+ * @param {import("googleapis").calendar_v3.Calendar} calendar
+ * @param {string} calendarId
+ * @param {any} timeMin
+ * @param {any} timeMax
+ */
+async function getEvents(calendar, calendarId, timeMin, timeMax) {
+  const { data } = await calendar.events.list({
+    calendarId,
+    timeMin,
+    timeMax,
+    maxResults: 100,
+    singleEvents: true,
+    orderBy: 'startTime'
+  });
+
+  return data.items?.map(({ start, end, summary }) => ({
+    start,
+    end,
+    summary
+  })) ?? [];
 }
