@@ -1,14 +1,21 @@
 import bodyParser from "body-parser";
 import express from "express";
+import expressBasicAuth from "express-basic-auth";
 import { PNG } from "pngjs";
 import drawCalendar from "./calendar.js";
 import * as quad from './compress/quadOld.js';
 import * as rle from './compress/rle.js';
 import drawElectricity from './electricity.js';
+import { getConfig } from "./getConfig.js";
 import toPixels from './toPixels.js';
 
 const app = express()
   .use(bodyParser.text({ type: "*/*" }))
+  .use(expressBasicAuth({
+    users: await getConfig().then(c => c.users),
+    challenge: true,
+    realm: 'edp'
+  }))
   .get("/calendar", async (req, res) => toPngStream(await drawCalendar()).pipe(res))
   .get("/electricity", async (req, res) => toPngStream(await drawElectricity()).pipe(res))
   .get("/data", async (req, res) => res.end(toPixels(await drawCalendar()), "binary"))

@@ -142,7 +142,9 @@ export default async function drawCalendar() {
  */
 async function getCalendarEvents(timeMin, timeMax) {
   const config = await getConfig();
-  const calendar = google.calendar({ version: 'v3', auth: config.google });
+  /** @type {any} */
+  const auth = google.auth.fromJSON(config.google);
+  const calendar = google.calendar({ version: 'v3', auth });
   return await Promise.all([
     getEvents(calendar, 'gundersen@gmail.com', timeMin, timeMax),
     getEvents(calendar, 'annaemelieakesson@gmail.com', timeMin, timeMax),
