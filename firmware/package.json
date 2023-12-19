@@ -12,6 +12,6 @@
   "license": "ISC",
   "devDependencies": {
     "@types/espruino": "^1.94.10",
-    "espruino": "^0.1.53"
+    "espruino": "^0.1.54"
   }
 }

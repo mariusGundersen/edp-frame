@@ -5,25 +5,9 @@ const config = require("./config.js");
 const Storage = require("Storage");
 const edp = require("./edp.js");
 const http = require("http");
-
-/*
-
-function fetch(req) {
-  const options = url.parse(req);
-  options.method = 'POST';
-  options.headers = {
-    "Content-Type": "text/plain",
-    "Transfer-Encoding": "chunked",
-  }
-  return new Promise((res, rej) => {
-    const req = require("http").request(options, res);
-    req.on("error", rej);
-    const logFile = Storage.open("log", "r");
-    E.pipe(logFile, req, { chunkSize: 256 });
-  });
-}
-*/
-
+const utils = require('./modules/utils.js');
+const delay = utils.delay;
+const retry = utils.retry;
 
 function fetch(url) {
   return new Promise((res, rej) =>
@@ -31,28 +15,18 @@ function fetch(url) {
   );
 }
 
-Promise.prototype.finally = function (f) {
-  return this.then(
-    (x) => Promise.resolve(f()).then(() => x),
-    (x) => Promise.resolve(f()).then(() => Promise.reject(x))
-  );
-};
-
-function delay(ms) {
-  return new Promise((res) => setTimeout(res, ms));
-}
-
 //setSleepIndicator(LED2);
 setSleepIndicator(undefined);
 
 function wait() {
   var now = new Date();
+  var hours = 23 - now.getHours();
   var mins = 59 - now.getMinutes();
   var secs = 59 - now.getSeconds();
 
-  mins += 15; //try to call 15 past every hour
+  hours += 4; //try to call 04:00
 
-  return delay(secs * 1000 + mins * 60 * 1000);
+  return delay((secs + (mins + hours * 60) * 60) * 1000);
 }
 
 B9.set(); //make sure to set esp-01 EN high;
@@ -60,19 +34,18 @@ A10.set(); //make sure to set esp-01 RST high;
 Serial2.setup(115200, { rx: A3, tx: A2 });
 const wifi = require("./ESP8266WiFi.js").setup(Serial2);
 
-const log = (message) => undefined;//Storage.open("log", "a").write(`${new Date()}: ${message}\n`);
-
-function retry(attempts, task) {
-  return () => {
-    if (attempts == 0) return task();
-    return task().catch(retry(attempts - 1, task));
+let logMethod = 'storage';
+function log(message) {
+  if (logMethod === 'console') {
+    console.log(message);
+  } else if (logMethod === 'storage') {
+    Storage.open("log", "a").write(`${new Date()}: ${message}\n`);
   }
 }
 
 function run() {
   setDeepSleep(false);
   log("run");
-  //Serial2.setup(115200, { rx: A3, tx: A2 });
   wifi.enable();
   return delay(1_000)
     .then(wifi.reset)
@@ -86,10 +59,10 @@ function run() {
       log("edp.init()");
       return edp.init();
     }))
-    .then(() => {
-      log(`fetch("${config.url}")`);
-      return fetch(config.url);
-    })
+    .then(retry(5, () => {
+      log(`fetch({})`);
+      return fetch(config.options);
+    }))
     .then((response) => {
       // Don't write any code here! We don't want to miss any of the incoming packets
 
@@ -112,7 +85,6 @@ function run() {
           if (response.statusCode != "200") {
             rej("Request failed " + response.statusCode);
           } else {
-            eraseLog();
             log("response.on(close)");
             setTime(new Date(response.headers.Date).getTime() / 1000);
             res();
@@ -123,7 +95,33 @@ function run() {
     .finally(() => {
       log("finally: wifi.disable()");
       wifi.disable();
-      //Serial2.unsetup();
+    })
+    .catch((err) => {
+      log(`catch: ${typeof err === 'string' ? err : JSON.stringify(err)}`);
+      
+      const g = Graphics.createArrayBuffer(400, 8, 1, {msb: true});
+      g.setRotation(2);
+      const view = new Int8Array(g.buffer);
+      const bg = new Int8Array(50);
+      bg.fill(0);
+
+      const logFile = Storage.open("log", "r");
+      edp.setBlack();
+      for(let y=0; y<480; y++){
+        if(y%8 === 0){
+          g.clear();
+          const line = logFile.readLine();
+          if(line) g.drawString(line, 1, 1);
+        }
+        edp.sendData(view.subarray((y%8)*50, ((y%8)+1)*50));
+        edp.sendData(bg);
+      }
+      edp.setRed();
+      for(let y=0; y<480; y++){
+        edp.sendData(bg);
+        edp.sendData(bg);
+      }
+      eraseLog();
     })
     .then(() => {
       log("then: edp.refresh()");
@@ -138,7 +136,7 @@ function run() {
       setDeepSleep(true);
     })
     .catch((err) => {
-      log(`catch: ${err}`);
+      log(`catch: ${typeof err === 'string' ? err : JSON.stringify(err)}`);
     })
     .then(wait)
     .then(run);
