@@ -47,12 +47,12 @@ export default async function drawCalendar() {
   const happenings = events
     .filter(e => e.start?.dateTime)
     .map(e => ({
-      start: Temporal.Instant.from(e.start?.dateTime).toZonedDateTimeISO(e.start?.timeZone).toPlainDateTime(),
-      end: Temporal.Instant.from(e.end?.dateTime).toZonedDateTimeISO(e.end?.timeZone).toPlainDateTime(),
-      summary: e.summary
+      start: Temporal.Instant.from(e.start?.dateTime ?? '').toZonedDateTimeISO(e.start?.timeZone ?? '').toPlainDateTime(),
+      end: Temporal.Instant.from(e.end?.dateTime ?? '').toZonedDateTimeISO(e.end?.timeZone ?? '').toPlainDateTime(),
+      summary: e.summary ?? ''
     }))
     .sort((a, b) => Temporal.PlainDateTime.compare(a.start, b.start))
-    .filter((e, i, l) => i === 0 || e.summary != l[i - 1].summary);
+    .filter((e, i, l) => i === 0 || !isSameEvent(e, l[i - 1]));
   console.log(happenings);
 
   return await drawInCanvas(async ctx => {
@@ -105,14 +105,22 @@ export default async function drawCalendar() {
       ctx.font = '18px OpenSans';
       ctx.fillText(`${day.day}. ${monthName}`, center, 5 * hourHeight + 24);
       ctx.font = '60px yr';
-      ctx.fillText(todaysWeather.icon, center, 50);
+      ctx.fillText(todaysWeather.icon, center, 40);
       ctx.font = '16px OpenSans';
-      ctx.fillStyle = '#f00';
-      ctx.textAlign = 'right';
-      ctx.fillText(`${Math.round(minTemperature)}°C`, center - 45, 50);
 
+      ctx.fillStyle = minTemperature < 0 ? '#000' : '#f00';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${Math.round(minTemperature)}°C`, center - 45, 40);
+
+      ctx.fillStyle = maxTemperature < 0 ? '#000' : '#f00';
       ctx.textAlign = 'left';
-      ctx.fillText(`${Math.round(maxTemperature)}°C`, center + 45, 50);
+      ctx.fillText(`${Math.round(maxTemperature)}°C`, center + 45, 40);
+
+      if (isRain(todaysWeather.symbol)) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f00';
+        ctx.fillText(`${Math.round(todaysWeather.rain)}mm`, center, 75);
+      }
 
       for (const { start, end, summary } of happenings.filter(h => h.start.toPlainDate().equals(day))) {
         const yOffset = Math.max(7, start.hour + start.minute / 60);
@@ -134,6 +142,14 @@ export default async function drawCalendar() {
       }
     }
   });
+}
+
+/**
+ * @param {{ start: Temporal.PlainDateTime; end: Temporal.PlainDateTime; summary: string; }} a
+ * @param {{ start: Temporal.PlainDateTime; end: Temporal.PlainDateTime; summary: string; }} b
+ */
+function isSameEvent(a, b) {
+  return a.summary === b.summary && a.start.equals(b.start) && a.end.equals(b.end);
 }
 
 /**
@@ -173,4 +189,16 @@ async function getEvents(calendar, calendarId, timeMin, timeMax) {
     end,
     summary
   })) ?? [];
+}
+
+/**
+ * @param {string} icon
+ */
+function isRain(icon) {
+  const value = parseInt(icon, 10);
+  console.log(icon, value);
+  if (value < 5) return false;
+  if (value < 15) return true;
+  if (value === 15) return false;
+  return true;
 }

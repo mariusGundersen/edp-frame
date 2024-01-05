@@ -263,7 +263,7 @@ const icons = {
  *
  * @param {string} from
  * @param {string} to
- * @returns {Promise<{icon: string, tile: [number, number], temperature: number, time: string}[]>}
+ * @returns {Promise<{icon: string, tile: [number, number], temperature: number, time: string, rain: number, symbol: string}[]>}
  */
 export default async function getWeather(from, to) {
   const json = await fetchJson(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=59.917&lon=10.817`);
@@ -276,9 +276,11 @@ export default async function getWeather(from, to) {
     //.filter(t => t.data.next_1_hours?.summary.symbol_code)
     .map(t => ({
       symbol_code: t.data,
+      symbol: map[(t.data.next_12_hours ?? t.data.next_6_hours ?? t.data.next_1_hours)?.summary.symbol_code],
       icon: iconsb[map[(t.data.next_12_hours ?? t.data.next_6_hours ?? t.data.next_1_hours)?.summary.symbol_code]],
       tile: getTile(t.data),
       temperature: t.data.instant.details.air_temperature,
+      rain: (t.data.next_6_hours ?? t.data.next_1_hours)?.details.precipitation_amount,
       time: t.time
     }))
     .map((t, i, a) => ({
