@@ -62,7 +62,7 @@ export default async function getPlan(from, to) {
     .filter((s) => s.name.includes("Måltid"))
     .flatMap((s) => s.items)
     .map(({ date, note }) => ({
-      date: `${date}T${/\d+:\d+/.exec(note)[0]}:00`,
+      date: `${date}T${/\d+:\d+/.exec(note)?.[0] ?? "10:00"}:00`,
       note: /(\d+:\d+:?\s+)?(.*)/.exec(note)?.[2] ?? note,
     }));
   console.log(meals);
