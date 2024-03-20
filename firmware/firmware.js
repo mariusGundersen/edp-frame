@@ -26,7 +26,10 @@ function wait() {
 
   hours += 4; //try to call 04:00
 
-  return delay((secs + (mins + hours * 60) * 60) * 1000);
+  return Promise.any([
+    delay((secs + (mins + hours * 60) * 60) * 1000).then(() => clearWatch()),
+    new Promise(r => setWatch(r, BTN1, {edge: 'rising', debounce: 25})).then(() => clearTimeout())
+  ]);
 }
 
 function getBattery(){

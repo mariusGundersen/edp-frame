@@ -6,6 +6,12 @@ Promise.prototype.finally = function (f) {
   );
 };
 
+Promise.any = function(a){
+  return new Promise((res, rej) => {
+    a.forEach(p => p.then(res, rej));
+  });
+}
+
 function delay(ms) {
   return new Promise((res) => setTimeout(res, ms));
 }
