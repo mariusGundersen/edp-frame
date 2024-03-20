@@ -1,7 +1,7 @@
-const busy = A5;
-const rst = A6;
-const dc = A7;
-const cs = B1;
+const busy = B10;
+const rst = B13;
+const dc = B14;
+const cs = B15;
 const clk = B3;
 const din = B5;
 
@@ -23,7 +23,7 @@ function watch(pin) {
   return new Promise((res, rej) => {
     if (pin.read()) return res();
     setWatch(res, pin, { repeat: false, edge: "rising" });
-    setTimeout(rej, 60_000, `timeout: watched pin ${pin} never changed`)
+    setTimeout(rej, 60 * 1000, `timeout: watched pin ${pin} never changed`)
   });
 }
 

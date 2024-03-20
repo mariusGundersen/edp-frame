@@ -70,4 +70,4 @@ export default async function getPlan(from, to) {
   return meals;
 }
 
-await getPlan("2024-03-14", "2024-03-16");
+//await getPlan("2024-03-14", "2024-03-16");

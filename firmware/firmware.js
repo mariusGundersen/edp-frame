@@ -29,6 +29,10 @@ function wait() {
   return delay((secs + (mins + hours * 60) * 60) * 1000);
 }
 
+function getBattery(){
+  return Math.round(analogRead(A5)*300 - 200);
+}
+
 B9.set(); //make sure to set esp-01 EN high;
 A10.set(); //make sure to set esp-01 RST high;
 Serial2.setup(115200, { rx: A3, tx: A2 });
@@ -61,7 +65,7 @@ function run() {
     }))
     .then(retry(5, () => {
       log(`fetch({})`);
-      return fetch(config.options);
+      return fetch(config.options(getBattery()));
     }))
     .then((response) => {
       // Don't write any code here! We don't want to miss any of the incoming packets

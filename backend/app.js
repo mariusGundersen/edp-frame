@@ -18,7 +18,7 @@ const app = express()
   }))
   .get("/calendar", async (req, res) => toPngStream(await drawCalendar()).pipe(res))
   .get("/electricity", async (req, res) => toPngStream(await drawElectricity()).pipe(res))
-  .get("/data", async (req, res) => res.end(toPixels(await drawCalendar()), "binary"))
+  .get("/data", async (req, res) => res.end(toPixels(await drawCalendar(req.query.battery)), "binary"))
   .get("/data/rle", async (req, res) => res.end(toPixels(rle.compress(await drawElectricity())), "binary"))
   .get("/data/quad", async (req, res) => res.end(toPixels(quad.compress(await drawElectricity())), "binary"))
   .post("/data", async (req, res) => {

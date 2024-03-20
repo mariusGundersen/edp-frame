@@ -31,7 +31,8 @@ const MONTHS = [
   "Desember",
 ];
 
-export default async function drawCalendar() {
+export default async function drawCalendar(battery = '0') {
+  console.log(battery);
   const marginLeft = 62;
   const dayWidth = 246;
   const hourHeight = 20;
@@ -89,8 +90,11 @@ export default async function drawCalendar() {
   return await drawInCanvas(async (ctx) => {
     ctx.strokeStyle = "#888";
     ctx.lineWidth = 2;
-    ctx.textAlign = "center";
-    ctx.font = "28px OpenSans";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.font = "12px OpenSans";
+
+    ctx.fillText(`Battery: ${battery}%`, 0, 0);
 
     ctx.stroke();
 
