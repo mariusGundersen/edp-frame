@@ -31,7 +31,7 @@ const MONTHS = [
   "Desember",
 ];
 
-export default async function drawCalendar(battery = '0') {
+export default async function drawCalendar(battery = "0") {
   console.log(battery);
   const marginLeft = 62;
   const dayWidth = 246;
@@ -140,6 +140,11 @@ export default async function drawCalendar(battery = '0') {
       const minTemperature = Math.min(...todaysTemperatures);
       const maxTemperature = Math.max(...todaysTemperatures);
 
+      const todaysRain = weather
+        .filter((w) => w.dateTime.toPlainDate().equals(day))
+        .map((w) => w.rain)
+        .reduce((a, b) => a + b, 0);
+
       ctx.fillStyle = "#000";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -149,7 +154,7 @@ export default async function drawCalendar(battery = '0') {
       ctx.fillText(`${day.day}. ${monthName}`, center, 5 * hourHeight + 24);
       ctx.font = "60px yr";
       ctx.fillText(todaysWeather.icon, center, 40);
-      ctx.font = "16px OpenSans";
+      ctx.font = "20px OpenSans";
 
       ctx.fillStyle = minTemperature < 0 ? "#000" : "#f00";
       ctx.textAlign = "right";
@@ -161,8 +166,8 @@ export default async function drawCalendar(battery = '0') {
 
       if (isRain(todaysWeather.symbol)) {
         ctx.textAlign = "center";
-        ctx.fillStyle = "#f00";
-        ctx.fillText(`${Math.round(todaysWeather.rain)}mm`, center, 75);
+        ctx.fillStyle = "#444";
+        ctx.fillText(`${Math.round(todaysRain)} mm`, center, 75);
       }
 
       for (const { start, end, summary, background } of happenings.filter((h) =>
@@ -181,7 +186,7 @@ export default async function drawCalendar(battery = '0') {
         if (background) {
           ctx.beginPath();
           ctx.strokeStyle = "#f00";
-          ctx.fillStyle = "#faa";
+          ctx.fillStyle = "#fee";
           ctx.roundRect(
             left + 5,
             yOffset * hourHeight,

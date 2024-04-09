@@ -280,7 +280,7 @@ export default async function getWeather(from, to) {
       icon: iconsb[map[(t.data.next_12_hours ?? t.data.next_6_hours ?? t.data.next_1_hours)?.summary.symbol_code]],
       tile: getTile(t.data),
       temperature: t.data.instant.details.air_temperature,
-      rain: (t.data.next_6_hours ?? t.data.next_1_hours)?.details.precipitation_amount,
+      rain:  t.data.next_1_hours?.details.precipitation_amount,
       time: t.time
     }))
     .map((t, i, a) => ({
