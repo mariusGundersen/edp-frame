@@ -186,7 +186,7 @@ export default async function drawCalendar(battery = "0") {
         if (background) {
           ctx.beginPath();
           ctx.strokeStyle = "#f00";
-          ctx.fillStyle = "#fee";
+          ctx.fillStyle = "#f00";
           ctx.roundRect(
             left + 5,
             yOffset * hourHeight,
@@ -200,7 +200,7 @@ export default async function drawCalendar(battery = "0") {
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.font = "15px OpenSans";
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = background ? "#fff" : "#000";
 
         const padding = background ? 10 : 0;
         const textSize = ctx.measureText(summary);
