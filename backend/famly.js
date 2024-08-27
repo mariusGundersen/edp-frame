@@ -59,12 +59,28 @@ export default async function getPlan(from, to) {
 
   const meals = json.data.childDevelopment.lessonPlans.list.lessonPlans
     .flatMap((l) => l.sections)
-    .filter((s) => s.name.includes("Måltid"))
+    .filter((s) => s.name.toLowerCase().includes("måltid"))
     .flatMap((s) => s.items)
-    .map(({ date, note }) => ({
-      date: `${date}T${/\d+:\d+/.exec(note)?.[0] ?? "10:00"}:00`,
-      note: /(\d+:\d+:?\s+)?(.*)/.exec(note)?.[2] ?? note,
-    }));
+    .map(({ date, note }) => {
+      let r = /(\d+:\d+):?\s+(.*)/.exec(note);
+      if(r){
+        const [,time, note] = r;
+        return ({
+          date: `${date}T${time}:00`,
+          note,
+        });
+      }
+      
+      r = /(\d) måltid:?\s+(.*)/.exec(note);
+
+      if(r){
+        const [,num, note] = r;
+        return ({
+          date: `${date}T${num === '1' ? '10:30' : '13:30'}:00`,
+          note
+        })
+      }
+    });
   console.log(meals);
 
   return meals;
